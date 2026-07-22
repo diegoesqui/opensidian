@@ -1,6 +1,8 @@
 /* ========== Variables y tema ========== */
 :root {
-  --font-ui: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  /* Inter va incrustada en el HTML (ver src/font.ts): mismo aspecto en
+     cualquier sistema operativo, sin depender de qué fuentes tenga instaladas. */
+  --font-ui: 'Inter Variable', ui-sans-serif, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, Menlo, monospace;
 
   --bg: #ffffff;
@@ -340,6 +342,21 @@ button.icon.danger:hover {
   font-weight: 600;
 }
 
+.row.dragging {
+  opacity: 0.4;
+}
+
+.row.drag-over {
+  background: var(--bg-active);
+  outline: 1.5px dashed var(--accent);
+  outline-offset: -1.5px;
+}
+
+.tree.drag-over-root {
+  background: var(--bg-active);
+  border-radius: 6px;
+}
+
 .twisty {
   width: 14px;
   color: var(--muted);
@@ -564,6 +581,23 @@ button.icon.danger:hover {
 .cm-url {
   color: var(--muted);
   text-decoration: underline;
+}
+
+/* Enlaces renderizados por el live preview (sintaxis oculta). Cmd/Ctrl+clic
+   para abrir/navegar; el título nativo del navegador muestra el destino. */
+.cm-hyperlink {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.cm-wikilink {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  cursor: pointer;
 }
 
 /* padding, no margin: CodeMirror mide la altura de cada .cm-line para su
@@ -898,6 +932,35 @@ button.icon.danger:hover {
 .qs-none {
   color: var(--muted);
   cursor: default;
+}
+
+/* ========== Autocompletar [[wiki-links]] ========== */
+.cm-tooltip.cm-tooltip-autocomplete {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.cm-tooltip-autocomplete > ul {
+  font-family: var(--font-ui);
+  max-height: 14em;
+}
+
+.cm-tooltip-autocomplete > ul > li {
+  padding: 6px 10px;
+  color: var(--fg);
+}
+
+.cm-tooltip-autocomplete > ul > li[aria-selected] {
+  background: var(--accent) !important;
+  color: #fff !important;
+}
+
+.cm-completionMatchedText {
+  text-decoration: none;
+  font-weight: 700;
 }
 
 /* ========== Scrollbars discretos ========== */

@@ -1,9 +1,12 @@
 import { useEffect, useRef } from 'preact/hooks';
 import type { EditorView } from '@codemirror/view';
-import { vault } from '../state';
+import { openOrCreateWikiLink, vault } from '../state';
 import { createEditor } from '../editor/editor';
+import { linkClickHandling } from '../editor/live-preview';
+import { wikiLinkAutocomplete } from '../editor/wikilink-autocomplete';
 import { isDeleted, registerFlusher } from '../editor/autosave';
-import { notifySaved } from '../search';
+import { filePaths, notifySaved } from '../search';
+import { titleOf } from '../util';
 
 interface Props {
   path: string;
@@ -63,7 +66,16 @@ export function MarkdownEditor({ path, autofocus, placeholder }: Props) {
       }
       knownMtime = await v.lastModified(path);
       if (disposed) return;
-      view = createEditor({ parent, content, onDocChanged: onChange, placeholder });
+      view = createEditor({
+        parent,
+        content,
+        onDocChanged: onChange,
+        placeholder,
+        extraExtensions: [
+          linkClickHandling((title) => void openOrCreateWikiLink(title)),
+          wikiLinkAutocomplete(() => filePaths.value.map(titleOf))
+        ]
+      });
       if (autofocus) view.focus();
     })();
 

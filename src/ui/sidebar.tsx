@@ -5,6 +5,7 @@ import {
   createNote,
   currentPath,
   deleteEntry,
+  moveEntry,
   openNote,
   quickOpen,
   renameEntry,
@@ -15,6 +16,7 @@ import {
 } from '../state';
 import type { VaultEntry } from '../fs/vault';
 import { exportZip } from '../fs/export';
+import { parentOf } from '../util';
 import { cycleTheme, themeIcon, themeLabel } from './theme';
 import { sidebarCollapsed, toggleSidebar } from './layout';
 
@@ -38,6 +40,59 @@ const collapsed = signal<Record<string, boolean>>({});
 
 const isMac = /Mac/i.test(navigator.platform);
 const mod = isMac ? '⌘' : 'Ctrl+';
+
+// Drag & drop de notas/carpetas en el árbol. `dropTarget` usa '' para la raíz.
+const draggingEntry = signal<VaultEntry | null>(null);
+const dropTarget = signal<string | null>(null);
+
+function canDropOn(dir: string): boolean {
+  const d = draggingEntry.value;
+  if (!d) return false;
+  if (parentOf(d.path) === dir) return false; // ya está ahí
+  if (d.kind === 'dir' && (dir === d.path || dir.startsWith(d.path + '/'))) return false;
+  return true;
+}
+
+function endDrag() {
+  draggingEntry.value = null;
+  dropTarget.value = null;
+}
+
+function dragHandlers(entry: VaultEntry) {
+  return {
+    draggable: true,
+    onDragStart: (e: DragEvent) => {
+      draggingEntry.value = entry;
+      e.dataTransfer?.setData('text/plain', entry.path);
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+    },
+    onDragEnd: endDrag
+  };
+}
+
+/** Handlers de zona de destino para una carpeta (o '' para la raíz del árbol). */
+function dropHandlers(dir: string) {
+  return {
+    onDragOver: (e: DragEvent) => {
+      if (!canDropOn(dir)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dropTarget.value = dir;
+    },
+    onDragLeave: (e: DragEvent) => {
+      e.stopPropagation();
+      if (dropTarget.value === dir) dropTarget.value = null;
+    },
+    onDrop: (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const d = draggingEntry.value;
+      const ok = canDropOn(dir);
+      endDrag();
+      if (d && ok) void moveEntry(d, dir);
+    }
+  };
+}
 
 function NameInput({
   initial,
@@ -156,17 +211,21 @@ function TreeNode({ entry, depth }: { entry: VaultEntry; depth: number }) {
   const ed = editing.value;
   const renaming = ed?.type === 'rename' && ed.path === entry.path;
   const pad = `${depth * 14 + 8}px`;
+  const isDragging = draggingEntry.value?.path === entry.path;
 
   if (entry.kind === 'dir') {
     const isCollapsed = collapsed.value[entry.path] ?? false;
+    const isDropTarget = dropTarget.value === entry.path;
     return (
       <div>
         <div
-          class="row dir"
+          class={`row dir${isDragging ? ' dragging' : ''}${isDropTarget ? ' drag-over' : ''}`}
           style={{ paddingLeft: pad }}
           onClick={() =>
             (collapsed.value = { ...collapsed.value, [entry.path]: !isCollapsed })
           }
+          {...(renaming ? {} : dragHandlers(entry))}
+          {...dropHandlers(entry.path)}
         >
           <span class="twisty">{isCollapsed ? '▸' : '▾'}</span>
           {renaming ? (
@@ -199,9 +258,11 @@ function TreeNode({ entry, depth }: { entry: VaultEntry; depth: number }) {
   const active = currentPath.value === entry.path && view.value === 'note';
   return (
     <div
-      class={active ? 'row file active' : 'row file'}
+      class={`row file${active ? ' active' : ''}${isDragging ? ' dragging' : ''}`}
       style={{ paddingLeft: pad }}
       onClick={() => openNote(entry.path)}
+      {...(renaming ? {} : dragHandlers(entry))}
+      onDragOver={(e: DragEvent) => e.stopPropagation()}
     >
       <span class="file-icon">·</span>
       {renaming ? (
@@ -304,7 +365,7 @@ export function Sidebar() {
           📁
         </button>
       </div>
-      <div class="tree">
+      <div class={`tree${dropTarget.value === '' ? ' drag-over-root' : ''}`} {...dropHandlers('')}>
         {ed && ed.type !== 'rename' && ed.dir === '' && (
           <NewEntryRow type={ed.type} dir="" depth={0} />
         )}

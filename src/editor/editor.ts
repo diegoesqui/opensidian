@@ -17,6 +17,7 @@ import { tags } from '@lezer/highlight';
 import { livePreview } from './live-preview';
 import { formatKeymap, formatToolbar } from './format-toolbar';
 import { blockFormatKeymap } from './block-format';
+import { linkPasteHandling } from './paste-link';
 
 // Lenguajes resaltados dentro de los bloques ```lang. PySpark = Python; Bash
 // usa el modo legacy "shell". El parser de markdown enchufa cada uno según la
@@ -83,6 +84,7 @@ export function createEditor(opts: EditorOptions): EditorView {
         keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
         formatKeymap(),
         blockFormatKeymap(),
+        linkPasteHandling(),
         opts.placeholder ? placeholder(opts.placeholder) : [],
         EditorView.updateListener.of((update) => {
           if (update.docChanged) opts.onDocChanged();

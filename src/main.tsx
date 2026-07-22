@@ -1,4 +1,5 @@
 import { render } from 'preact';
+import './font';
 import './styles.css';
 import { App } from './ui/app';
 import { initApp } from './state';

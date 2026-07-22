@@ -1,5 +1,5 @@
 import { syntaxTree } from '@codemirror/language';
-import type { Extension, Range } from '@codemirror/state';
+import type { EditorState, Extension, Range } from '@codemirror/state';
 import {
   Decoration,
   type DecorationSet,
@@ -8,6 +8,7 @@ import {
   type ViewUpdate,
   WidgetType
 } from '@codemirror/view';
+import type { SyntaxNode, SyntaxNodeRef } from '@lezer/common';
 
 /**
  * Live preview estilo Obsidian: los marcadores markdown (#, **, ``, - […])
@@ -98,6 +99,31 @@ class HrWidget extends WidgetType {
 const hide = Decoration.replace({});
 const lineClass = (cls: string) => Decoration.line({ class: cls });
 
+// px de sangría extra por cada nivel de anidación de listas (más allá del
+// primero), para que la jerarquía de bullets/numeradas se lea a simple vista.
+const LIST_INDENT = 22;
+
+function listDepth(node: SyntaxNodeRef): number {
+  let n: SyntaxNode | null = node.node.parent;
+  let depth = 0;
+  while (n) {
+    if (n.name === 'BulletList' || n.name === 'OrderedList') depth++;
+    n = n.parent;
+  }
+  return depth;
+}
+
+const WIKILINK_RE = /\[\[([^[\]]+)\]\]/g;
+
+function isInCode(state: EditorState, pos: number): boolean {
+  let n: SyntaxNode | null = syntaxTree(state).resolveInner(pos, 1);
+  while (n) {
+    if (n.name === 'InlineCode' || n.name === 'FencedCode' || n.name === 'CodeText') return true;
+    n = n.parent;
+  }
+  return false;
+}
+
 function build(view: EditorView): DecorationSet {
   const ranges: Range<Decoration>[] = [];
   const { state } = view;
@@ -143,8 +169,39 @@ function build(view: EditorView): DecorationSet {
             }
             break;
 
-          case 'ListMark': {
+          case 'Link': {
             if (isSel) break;
+            const linkNode = node.node;
+            const marks = linkNode.getChildren('LinkMark');
+            const urlNode = linkNode.getChild('URL');
+            const openMark = marks.find((m) => doc.sliceString(m.from, m.to) === '[');
+            const closeMark = marks.find((m) => doc.sliceString(m.from, m.to) === ']');
+            if (!openMark || !closeMark || !urlNode) break;
+            ranges.push(hide.range(openMark.from, openMark.to));
+            ranges.push(hide.range(closeMark.from, linkNode.to));
+            ranges.push(
+              Decoration.mark({
+                class: 'cm-hyperlink',
+                attributes: { title: doc.sliceString(urlNode.from, urlNode.to) }
+              }).range(linkNode.from, linkNode.to)
+            );
+            break;
+          }
+
+          case 'ListMark': {
+            const depth = listDepth(node);
+            if (depth > 1) {
+              ranges.push(
+                Decoration.line({
+                  attributes: { style: `padding-left: ${(depth - 1) * LIST_INDENT}px` }
+                }).range(line.from)
+              );
+            }
+            if (isSel) break;
+            if (node.from > line.from) {
+              // sustituye la sangría real (espacios) por el padding de arriba
+              ranges.push(hide.range(line.from, node.from));
+            }
             if (!/^[-*+]$/.test(doc.sliceString(node.from, node.to))) break;
             const after = doc.sliceString(node.to, node.to + 5);
             if (/^\s\[[ xX]\]/.test(after)) {
@@ -206,6 +263,24 @@ function build(view: EditorView): DecorationSet {
         }
       }
     });
+
+    // Enlaces entre notas [[Nota]]: no forman parte de la sintaxis markdown
+    // estándar, así que no aparecen en el árbol; se detectan con una pasada
+    // de regex por línea, evitando código en línea/bloques.
+    for (let ln = doc.lineAt(from).number; ln <= doc.lineAt(to).number; ln++) {
+      const line = doc.line(ln);
+      if (selectedIn(line.from, line.to)) continue;
+      WIKILINK_RE.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = WIKILINK_RE.exec(line.text))) {
+        const start = line.from + m.index;
+        const end = start + m[0].length;
+        if (isInCode(state, start)) continue;
+        ranges.push(hide.range(start, start + 2));
+        ranges.push(hide.range(end - 2, end));
+        ranges.push(Decoration.mark({ class: 'cm-wikilink' }).range(start, end));
+      }
+    }
   }
   return Decoration.set(ranges, true);
 }
@@ -233,4 +308,62 @@ const livePreviewPlugin = ViewPlugin.fromClass(
 
 export function livePreview(): Extension {
   return livePreviewPlugin;
+}
+
+function linkNodeAt(state: EditorState, pos: number): SyntaxNode | null {
+  let n: SyntaxNode | null = syntaxTree(state).resolveInner(pos, 1);
+  while (n && n.name !== 'Link') n = n.parent;
+  return n;
+}
+
+function wikiLinkAt(state: EditorState, pos: number): string | null {
+  const line = state.doc.lineAt(pos);
+  WIKILINK_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = WIKILINK_RE.exec(line.text))) {
+    const start = line.from + m.index;
+    const end = start + m[0].length;
+    if (pos >= start && pos <= end) return m[1].trim();
+  }
+  return null;
+}
+
+/** Abre una URL solo si el esquema es uno seguro conocido (evita javascript:/data:). */
+function openSafeUrl(raw: string) {
+  const url = raw.trim();
+  if (/^https?:\/\//i.test(url) || /^mailto:/i.test(url)) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  } else if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) {
+    window.open(`https://${url}`, '_blank', 'noopener,noreferrer');
+  }
+}
+
+/**
+ * Cmd/Ctrl+clic sobre un enlace `[texto](url)` lo abre en una pestaña nueva;
+ * sobre un enlace `[[Nota]]` navega a esa nota (o la crea si no existe).
+ */
+export function linkClickHandling(onWikiLink: (title: string) => void): Extension {
+  return EditorView.domEventHandlers({
+    mousedown(event, view) {
+      if (!(event.metaKey || event.ctrlKey) || event.button !== 0) return false;
+      const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+      if (pos == null) return false;
+      const linkNode = linkNodeAt(view.state, pos);
+      if (linkNode) {
+        const urlNode = linkNode.getChild('URL');
+        if (urlNode) {
+          event.preventDefault();
+          openSafeUrl(view.state.sliceDoc(urlNode.from, urlNode.to));
+          return true;
+        }
+      }
+      const wiki = wikiLinkAt(view.state, pos);
+      if (wiki) {
+        event.preventDefault();
+        onWikiLink(wiki);
+        return true;
+      }
+      return false;
+    }
+  });
 }
