@@ -15,6 +15,14 @@
   --border: #e6e6e3;
   --danger: #d64545;
   --shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+
+  --syn-keyword: #a626a4;
+  --syn-string: #3f912f;
+  --syn-number: #b76b01;
+  --syn-comment: #a0a1a7;
+  --syn-function: #4078f2;
+  --syn-type: #986801;
+  --syn-punct: #6a6f77;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -31,6 +39,14 @@
     --border: #303236;
     --danger: #e06c6c;
     --shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+
+    --syn-keyword: #c678dd;
+    --syn-string: #98c379;
+    --syn-number: #d19a66;
+    --syn-comment: #7f848e;
+    --syn-function: #61afef;
+    --syn-type: #e5c07b;
+    --syn-punct: #abb2bf;
   }
 }
 
@@ -47,6 +63,14 @@
   --border: #303236;
   --danger: #e06c6c;
   --shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+
+  --syn-keyword: #c678dd;
+  --syn-string: #98c379;
+  --syn-number: #d19a66;
+  --syn-comment: #7f848e;
+  --syn-function: #61afef;
+  --syn-type: #e5c07b;
+  --syn-punct: #abb2bf;
 }
 
 * {
@@ -576,6 +600,30 @@ button.icon.danger:hover {
   padding-right: 10px;
 }
 
+/* Resaltado de sintaxis dentro de bloques de código. */
+.cm-tok-keyword {
+  color: var(--syn-keyword);
+}
+.cm-tok-string {
+  color: var(--syn-string);
+}
+.cm-tok-number {
+  color: var(--syn-number);
+}
+.cm-tok-comment {
+  color: var(--syn-comment);
+  font-style: italic;
+}
+.cm-tok-function {
+  color: var(--syn-function);
+}
+.cm-tok-type {
+  color: var(--syn-type);
+}
+.cm-tok-punct {
+  color: var(--syn-punct);
+}
+
 /* Checkboxes del live preview */
 .cm-task-checkbox {
   width: 15px;
@@ -643,7 +691,10 @@ button.icon.danger:hover {
 }
 
 .ft-heading {
-  font-weight: 700;
+  min-width: 26px;
+  padding: 0 5px;
+  font-weight: 650;
+  font-size: 11px;
 }
 
 .ft-numbered {
@@ -654,16 +705,27 @@ button.icon.danger:hover {
   font-size: 15px;
 }
 
-.ft-btn.ft-heading {
-  margin-right: 4px;
+.ft-btn.active {
+  background: var(--accent);
+  color: #fff;
 }
 
-.ft-btn.ft-code {
-  margin-right: 4px;
+/* Separador vertical entre grupos de botones. */
+.ft-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 3px;
+  background: currentColor;
+  opacity: 0.22;
 }
 
 .ft-btn:hover {
   background: rgba(255, 255, 255, 0.18);
+}
+
+.ft-btn.active:hover {
+  background: var(--accent);
+  filter: brightness(1.12);
 }
 
 :root[data-theme='dark'] .ft-btn:hover {

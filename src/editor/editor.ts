@@ -2,11 +2,35 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, drawSelection, keymap, placeholder } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import {
+  HighlightStyle,
+  LanguageDescription,
+  LanguageSupport,
+  StreamLanguage,
+  syntaxHighlighting
+} from '@codemirror/language';
+import { python } from '@codemirror/lang-python';
+import { sql } from '@codemirror/lang-sql';
+import { javascript } from '@codemirror/lang-javascript';
+import { shell } from '@codemirror/legacy-modes/mode/shell';
 import { tags } from '@lezer/highlight';
 import { livePreview } from './live-preview';
 import { formatKeymap, formatToolbar } from './format-toolbar';
 import { blockFormatKeymap } from './block-format';
+
+// Lenguajes resaltados dentro de los bloques ```lang. PySpark = Python; Bash
+// usa el modo legacy "shell". El parser de markdown enchufa cada uno según la
+// etiqueta del bloque.
+const codeLanguages = [
+  LanguageDescription.of({ name: 'python', alias: ['py', 'pyspark'], support: python() }),
+  LanguageDescription.of({ name: 'sql', support: sql() }),
+  LanguageDescription.of({ name: 'javascript', alias: ['js', 'jsx'], support: javascript() }),
+  LanguageDescription.of({
+    name: 'shell',
+    alias: ['bash', 'sh', 'zsh'],
+    support: new LanguageSupport(StreamLanguage.define(shell))
+  })
+];
 
 const mdHighlight = HighlightStyle.define([
   { tag: tags.heading1, class: 'cm-h1' },
@@ -24,7 +48,15 @@ const mdHighlight = HighlightStyle.define([
   { tag: tags.url, class: 'cm-url' },
   { tag: tags.processingInstruction, class: 'cm-marker' },
   { tag: tags.meta, class: 'cm-marker' },
-  { tag: tags.contentSeparator, class: 'cm-marker' }
+  { tag: tags.contentSeparator, class: 'cm-marker' },
+  // Tokens de los lenguajes dentro de bloques de código.
+  { tag: [tags.keyword, tags.moduleKeyword, tags.definitionKeyword, tags.operatorKeyword], class: 'cm-tok-keyword' },
+  { tag: [tags.string, tags.special(tags.string), tags.regexp], class: 'cm-tok-string' },
+  { tag: [tags.number, tags.bool, tags.atom, tags.null], class: 'cm-tok-number' },
+  { tag: [tags.comment, tags.lineComment, tags.blockComment], class: 'cm-tok-comment' },
+  { tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], class: 'cm-tok-function' },
+  { tag: [tags.typeName, tags.className, tags.namespace], class: 'cm-tok-type' },
+  { tag: [tags.operator, tags.derefOperator, tags.punctuation, tags.separator], class: 'cm-tok-punct' }
 ]);
 
 export interface EditorOptions {
@@ -44,7 +76,7 @@ export function createEditor(opts: EditorOptions): EditorView {
         history(),
         drawSelection(),
         EditorView.lineWrapping,
-        markdown({ base: markdownLanguage }),
+        markdown({ base: markdownLanguage, codeLanguages }),
         syntaxHighlighting(mdHighlight),
         livePreview(),
         formatToolbar(),
