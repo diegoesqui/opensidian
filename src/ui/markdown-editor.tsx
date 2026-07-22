@@ -1,0 +1,97 @@
+import { useEffect, useRef } from 'preact/hooks';
+import type { EditorView } from '@codemirror/view';
+import { vault } from '../state';
+import { createEditor } from '../editor/editor';
+import { isDeleted, registerFlusher } from '../editor/autosave';
+import { notifySaved } from '../search';
+
+interface Props {
+  path: string;
+  autofocus?: boolean;
+  placeholder?: string;
+}
+
+/**
+ * Editor markdown ligado a un archivo del vault: carga el contenido,
+ * guarda con debounce mientras se escribe y recarga si el archivo
+ * cambia en disco al recuperar el foco.
+ */
+export function MarkdownEditor({ path, autofocus, placeholder }: Props) {
+  const host = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const v = vault.value;
+    const parent = host.current;
+    if (!v || !parent) return;
+
+    let view: EditorView | null = null;
+    let disposed = false;
+    let dirty = false;
+    let reloading = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let knownMtime: number | null = null;
+
+    const save = async () => {
+      if (!view || !dirty || isDeleted(path)) return;
+      dirty = false;
+      const text = view.state.doc.toString();
+      try {
+        await v.writeFile(path, text);
+        knownMtime = await v.lastModified(path);
+        notifySaved(path, text);
+      } catch (e) {
+        dirty = true;
+        console.error('Error guardando', path, e);
+      }
+    };
+
+    const onChange = () => {
+      if (reloading) return;
+      dirty = true;
+      clearTimeout(timer);
+      timer = setTimeout(() => void save(), 500);
+    };
+
+    const unregister = registerFlusher(save);
+
+    void (async () => {
+      let content = '';
+      try {
+        content = await v.readFile(path);
+      } catch {
+        // nota aún sin archivo: se creará al primer guardado
+      }
+      knownMtime = await v.lastModified(path);
+      if (disposed) return;
+      view = createEditor({ parent, content, onDocChanged: onChange, placeholder });
+      if (autofocus) view.focus();
+    })();
+
+    const onWindowFocus = async () => {
+      if (!view || dirty || isDeleted(path)) return;
+      const mtime = await v.lastModified(path);
+      if (mtime === null || mtime === knownMtime) return;
+      const content = await v.readFile(path);
+      if (!view) return;
+      if (content !== view.state.doc.toString()) {
+        reloading = true;
+        view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: content } });
+        reloading = false;
+      }
+      knownMtime = mtime;
+    };
+    window.addEventListener('focus', onWindowFocus);
+
+    return () => {
+      disposed = true;
+      clearTimeout(timer);
+      void save();
+      unregister();
+      window.removeEventListener('focus', onWindowFocus);
+      view?.destroy();
+      view = null;
+    };
+  }, [path]);
+
+  return <div class="editor-host" ref={host} />;
+}
