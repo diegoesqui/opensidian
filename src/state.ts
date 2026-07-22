@@ -9,9 +9,9 @@ import {
 } from './fs/vault';
 import { clearHandle, loadHandle, storeHandle } from './fs/handle-store';
 import { flushAll, markDeleted, unmarkDeleted } from './editor/autosave';
-import { buildIndex, notifyDeleted, notifyRenamed, notifySaved, resetIndex } from './search';
+import { buildIndex, filePaths, notifyDeleted, notifyRenamed, notifySaved, resetIndex } from './search';
 import { seedDemoVault } from './fs/demo';
-import { extOf, parentOf, titleOf } from './util';
+import { extOf, normalize, parentOf, titleOf } from './util';
 
 export type ViewKind = 'note' | 'journal' | 'search';
 
@@ -92,6 +92,18 @@ export function openNote(path: string): void {
   view.value = 'note';
 }
 
+/** Cmd/Ctrl+clic en un enlace [[Nota]]: la abre si existe, o la crea en la raíz. */
+export async function openOrCreateWikiLink(title: string): Promise<void> {
+  const target = normalize(title);
+  if (!target) return;
+  const match = filePaths.value.find((p) => normalize(titleOf(p)) === target);
+  if (match) {
+    openNote(match);
+    return;
+  }
+  await createNote('', title);
+}
+
 const sanitizeName = (name: string) => name.replace(/[\\/:*?"<>|]/g, '-').trim();
 
 async function freePath(v: Vault, dirPath: string, name: string): Promise<string> {
@@ -127,22 +139,13 @@ export async function createFolder(dirPath: string, rawName: string): Promise<vo
   await refreshTree();
 }
 
-async function renamePath(
-  path: string,
-  kind: 'file' | 'dir',
-  currentName: string,
-  rawName: string
-): Promise<void> {
+/** Primitiva común a renombrar y mover: reubica path -> newPath. */
+async function movePath(path: string, kind: 'file' | 'dir', newPath: string): Promise<boolean> {
   const v = vault.value;
-  if (!v) return;
-  let name = sanitizeName(rawName);
-  if (!name || name === currentName) return;
-  if (kind === 'file' && !NOTE_EXT.test(name)) name += extOf(currentName);
-  const parent = parentOf(path);
-  const newPath = parent ? `${parent}/${name}` : name;
+  if (!v || newPath === path) return false;
   if (await v.exists(newPath)) {
-    vaultError.value = `Ya existe «${name}».`;
-    return;
+    vaultError.value = `Ya existe «${newPath.split('/').pop()}» en ese destino.`;
+    return false;
   }
   await flushAll();
   await v.rename(path, newPath);
@@ -153,6 +156,21 @@ async function renamePath(
   }
   notifyRenamed(path, newPath, kind);
   await refreshTree();
+  return true;
+}
+
+async function renamePath(
+  path: string,
+  kind: 'file' | 'dir',
+  currentName: string,
+  rawName: string
+): Promise<void> {
+  let name = sanitizeName(rawName);
+  if (!name || name === currentName) return;
+  if (kind === 'file' && !NOTE_EXT.test(name)) name += extOf(currentName);
+  const parent = parentOf(path);
+  const newPath = parent ? `${parent}/${name}` : name;
+  await movePath(path, kind, newPath);
 }
 
 export async function renameEntry(entry: VaultEntry, rawName: string): Promise<void> {
@@ -162,6 +180,17 @@ export async function renameEntry(entry: VaultEntry, rawName: string): Promise<v
 /** Renombra la nota que se está viendo, a partir del título editado en NoteView. */
 export async function renameNoteTitle(path: string, rawTitle: string): Promise<void> {
   await renamePath(path, 'file', titleOf(path), rawTitle);
+}
+
+/** Mueve una nota o carpeta a otra carpeta destino (drag & drop en la barra lateral). */
+export async function moveEntry(entry: VaultEntry, destDir: string): Promise<void> {
+  if (parentOf(entry.path) === destDir) return; // ya está ahí
+  if (entry.kind === 'dir' && (destDir === entry.path || destDir.startsWith(entry.path + '/'))) {
+    vaultError.value = 'No puedes mover una carpeta dentro de sí misma.';
+    return;
+  }
+  const newPath = destDir ? `${destDir}/${entry.name}` : entry.name;
+  await movePath(entry.path, entry.kind, newPath);
 }
 
 export async function deleteEntry(entry: VaultEntry): Promise<void> {
