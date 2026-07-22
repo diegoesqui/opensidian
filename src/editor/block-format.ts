@@ -1,4 +1,4 @@
-import { Prec, type Extension } from '@codemirror/state';
+import { Prec, type EditorState, type Extension } from '@codemirror/state';
 import { type Command, type EditorView, type KeyBinding, keymap } from '@codemirror/view';
 
 interface LineChange {
@@ -60,13 +60,25 @@ function computeChecklistChange(lineText: string, lineFrom: number): LineChange 
   return { from: lineFrom, to: lineFrom, insert: '- [ ] ' };
 }
 
-/** Cicla el nivel de heading de la línea: ninguno → H1 → H2 → H3 → ninguno. */
-function computeHeadingChange(lineText: string, lineFrom: number): LineChange {
-  const m = HEADING_RE.exec(lineText);
-  const current = m ? m[2].length : 0;
-  const next = current === 0 ? 1 : current >= 3 ? 0 : current + 1;
-  const to = m ? lineFrom + m[0].length : lineFrom;
-  return { from: lineFrom, to, insert: next === 0 ? '' : '#'.repeat(next) + ' ' };
+/** Nivel de heading (1-6, o 0 si no lo es) de la línea donde está el cursor. */
+export function currentHeadingLevel(state: EditorState): number {
+  const line = state.doc.lineAt(state.selection.main.head);
+  const m = HEADING_RE.exec(line.text);
+  return m ? m[2].length : 0;
+}
+
+/**
+ * Fija el nivel de heading indicado; si la línea ya está en ese nivel, lo
+ * quita (comportamiento de conmutador del selector H1/H2/H3).
+ */
+function computeSetHeading(level: number): LineComputer {
+  return (lineText, lineFrom) => {
+    const m = HEADING_RE.exec(lineText);
+    const current = m ? m[2].length : 0;
+    const target = current === level ? 0 : level;
+    const to = m ? lineFrom + m[0].length : lineFrom;
+    return { from: lineFrom, to, insert: target === 0 ? '' : '#'.repeat(target) + ' ' };
+  };
 }
 
 /** Activa/desactiva la línea como ítem de lista con viñetas. */
@@ -86,7 +98,8 @@ function computeNumberedChange(lineText: string, lineFrom: number): LineChange {
 }
 
 export const checklistCommand: Command = (view) => applyToLines(view, computeChecklistChange);
-export const headingCommand: Command = (view) => applyToLines(view, computeHeadingChange);
+export const setHeadingCommand = (level: number): Command => (view) =>
+  applyToLines(view, computeSetHeading(level));
 export const bulletListCommand: Command = (view) => applyToLines(view, computeBulletChange);
 export const numberedListCommand: Command = (view) => applyToLines(view, computeNumberedChange);
 

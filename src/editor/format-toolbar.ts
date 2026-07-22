@@ -1,6 +1,12 @@
 import { Prec, type Extension } from '@codemirror/state';
 import { EditorView, KeyBinding, ViewPlugin, keymap, type ViewUpdate } from '@codemirror/view';
-import { bulletListCommand, checklistCommand, headingCommand, numberedListCommand } from './block-format';
+import {
+  bulletListCommand,
+  checklistCommand,
+  currentHeadingLevel,
+  numberedListCommand,
+  setHeadingCommand
+} from './block-format';
 
 /** Envuelve o desenvuelve la selección con un marcador markdown (negrita, cursiva…). */
 function toggleWrap(view: EditorView, marker: string): boolean {
@@ -53,54 +59,117 @@ export function formatKeymap(): Extension {
   return Prec.highest(keymap.of(bindings));
 }
 
-interface FormatButtonSpec {
+interface ButtonSpec {
   label: string;
   title: string;
   class: string;
   run: (view: EditorView) => boolean;
 }
 
-const buttonSpecs: FormatButtonSpec[] = [
-  { label: 'H', title: 'Título (H1 → H2 → H3 → ninguno)', class: 'ft-heading', run: headingCommand },
+const inlineSpecs: ButtonSpec[] = [
   { label: 'N', title: 'Negrita (Ctrl/⌘+B)', class: 'ft-bold', run: (v) => toggleWrap(v, '**') },
   { label: 'C', title: 'Cursiva (Ctrl/⌘+I)', class: 'ft-italic', run: (v) => toggleWrap(v, '*') },
   { label: 'T', title: 'Tachado', class: 'ft-strike', run: (v) => toggleWrap(v, '~~') },
-  { label: '</>', title: 'Código', class: 'ft-code', run: (v) => toggleWrap(v, '`') },
+  { label: '</>', title: 'Código', class: 'ft-code', run: (v) => toggleWrap(v, '`') }
+];
+
+const blockSpecs: ButtonSpec[] = [
   { label: '•', title: 'Lista con viñetas', class: 'ft-bullet', run: bulletListCommand },
   { label: '1.', title: 'Lista numerada', class: 'ft-numbered', run: numberedListCommand },
   { label: '☑', title: 'Checkbox (Ctrl/⌘+Enter)', class: 'ft-check', run: checklistCommand }
 ];
 
+const HEADING_LEVELS = [1, 2, 3];
+
 /** Barra de formato flotante que aparece sobre el texto seleccionado. */
 class FormatToolbarWidget {
   dom: HTMLElement;
+  private headingButtons: { level: number; el: HTMLButtonElement }[] = [];
+  // Mientras la selección permanezca en la misma línea, la barra no se
+  // reposiciona: así al pulsar el selector de título (que reajusta el tamaño
+  // del texto) el botón no se mueve bajo el cursor.
+  private anchorLine: number | null = null;
+  private onScroll = () => this.reposition();
 
   constructor(readonly view: EditorView) {
     this.dom = document.createElement('div');
     this.dom.className = 'format-toolbar';
     this.dom.style.display = 'none';
-    for (const spec of buttonSpecs) {
-      const btn = document.createElement('button');
-      btn.textContent = spec.label;
-      btn.title = spec.title;
-      btn.className = `ft-btn ${spec.class}`;
-      // mousedown (no click) + preventDefault: evita que el editor pierda el
-      // foco/la selección antes de aplicar el formato.
-      btn.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        spec.run(this.view);
-      });
-      this.dom.appendChild(btn);
+
+    for (const level of HEADING_LEVELS) {
+      const btn = this.makeButton(
+        `H${level}`,
+        `Título nivel ${level}`,
+        'ft-heading',
+        setHeadingCommand(level)
+      );
+      this.headingButtons.push({ level, el: btn });
     }
+    this.addSeparator();
+    for (const spec of inlineSpecs) this.makeButton(spec.label, spec.title, spec.class, spec.run);
+    this.addSeparator();
+    for (const spec of blockSpecs) this.makeButton(spec.label, spec.title, spec.class, spec.run);
+
     document.body.appendChild(this.dom);
-    this.scheduleReposition();
+    view.scrollDOM.addEventListener('scroll', this.onScroll, { passive: true });
+    window.addEventListener('resize', this.onScroll);
+  }
+
+  private makeButton(
+    label: string,
+    title: string,
+    cls: string,
+    run: (view: EditorView) => boolean
+  ): HTMLButtonElement {
+    const btn = document.createElement('button');
+    btn.textContent = label;
+    btn.title = title;
+    btn.className = `ft-btn ${cls}`;
+    // mousedown (no click) + preventDefault: evita que el editor pierda el
+    // foco/la selección antes de aplicar el formato.
+    btn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      run(this.view);
+    });
+    this.dom.appendChild(btn);
+    return btn;
+  }
+
+  private addSeparator() {
+    const sep = document.createElement('span');
+    sep.className = 'ft-sep';
+    this.dom.appendChild(sep);
+  }
+
+  private updateActiveHeading() {
+    const level = currentHeadingLevel(this.view.state);
+    for (const { level: lvl, el } of this.headingButtons) {
+      el.classList.toggle('active', lvl === level);
+    }
+  }
+
+  /** Reacciona a cambios de selección/documento decidiendo si recolocar la barra. */
+  sync() {
+    const sel = this.view.state.selection.main;
+    if (sel.empty || !this.view.hasFocus) {
+      this.dom.style.display = 'none';
+      this.anchorLine = null;
+      return;
+    }
+    const line = this.view.state.doc.lineAt(sel.head).number;
+    if (line !== this.anchorLine) {
+      // Selección en una línea distinta (o recién mostrada): recolocar.
+      this.anchorLine = line;
+      this.reposition();
+    }
+    // Misma línea: mantener posición; solo refrescar el título activo.
+    this.updateActiveHeading();
   }
 
   // view.coordsAtPos() solo puede leerse en la fase de medición de CodeMirror
-  // (requestMeasure); llamarlo directamente dentro de update() hace que el
-  // plugin entero se desactive con "Reading the editor layout isn't allowed
-  // during an update".
-  scheduleReposition() {
+  // (requestMeasure); llamarlo dentro de update() lanza "Reading the editor
+  // layout isn't allowed during an update" y desactiva el plugin.
+  reposition() {
     this.view.requestMeasure<{ top: number; left: number } | null>({
       read: (view) => {
         const sel = view.state.selection.main;
@@ -116,6 +185,7 @@ class FormatToolbarWidget {
           return;
         }
         this.dom.style.display = 'flex';
+        this.updateActiveHeading();
         const width = this.dom.offsetWidth;
         const height = this.dom.offsetHeight;
         const clampedLeft = Math.max(
@@ -129,6 +199,8 @@ class FormatToolbarWidget {
   }
 
   destroy() {
+    this.view.scrollDOM.removeEventListener('scroll', this.onScroll);
+    window.removeEventListener('resize', this.onScroll);
     this.dom.remove();
   }
 }
@@ -139,10 +211,11 @@ export function formatToolbar(): Extension {
       widget: FormatToolbarWidget;
       constructor(view: EditorView) {
         this.widget = new FormatToolbarWidget(view);
+        this.widget.sync();
       }
       update(update: ViewUpdate) {
-        if (update.selectionSet || update.docChanged || update.focusChanged || update.geometryChanged) {
-          this.widget.scheduleReposition();
+        if (update.selectionSet || update.docChanged || update.focusChanged) {
+          this.widget.sync();
         }
       }
       destroy() {
