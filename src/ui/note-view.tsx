@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { EditorView } from '@codemirror/view';
 import { titleOf, parentOf } from '../util';
 import { renameNoteTitle, vaultError } from '../state';
 import { MarkdownEditor } from './markdown-editor';
+import { Toc } from './toc';
+import type { Heading } from '../editor/headings';
 
 function EditableTitle({ path }: { path: string }) {
   const [editing, setEditing] = useState(false);
@@ -62,14 +65,68 @@ function EditableTitle({ path }: { path: string }) {
 
 export function NoteView({ path }: { path: string }) {
   const parent = parentOf(path);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<EditorView | null>(null);
+  const [headings, setHeadings] = useState<Heading[]>([]);
+  const [tocRight, setTocRight] = useState<number | null>(null);
+
+  // El índice es un overlay `position: fixed` (para no desplazarse con el
+  // scroll de la nota), pero anclado al borde derecho real de la vista de
+  // nota (columna centrada de 46rem), no al de la ventana: recalculamos
+  // solo su posición horizontal cuando cambia el ancho disponible (p. ej.
+  // al plegar la barra lateral o redimensionar la ventana). La vertical
+  // es una constante en CSS, ya que `.main` no se desplaza como bloque.
+  useEffect(() => {
+    const el = rootRef.current;
+    const container = el?.parentElement;
+    if (!el || !container) return;
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
+      setTocRight(Math.max(8, window.innerWidth - rect.right + 8));
+    };
+    measure();
+    const obs = new ResizeObserver(measure);
+    obs.observe(container);
+    window.addEventListener('resize', measure);
+    return () => {
+      obs.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
+
+  // Al cambiar de nota, MarkdownEditor se remonta (key={path}) pero NoteView
+  // no: sin esto, el índice de la nota anterior quedaría visible un instante
+  // mientras se carga el contenido de la nueva.
+  useEffect(() => {
+    setHeadings([]);
+    editorRef.current = null;
+  }, [path]);
+
+  const jump = (pos: number) => {
+    const view = editorRef.current;
+    if (!view) return;
+    view.dispatch({
+      selection: { anchor: pos },
+      effects: EditorView.scrollIntoView(pos, { y: 'start', yMargin: 20 })
+    });
+    view.focus();
+  };
+
   return (
-    <div class="note-view">
+    <div class="note-view" ref={rootRef}>
       <header class="note-header">
         {parent && <span class="note-crumb">{parent.replace(/\//g, ' / ')} /</span>}
         <EditableTitle key={path} path={path} />
         {vaultError.value && <p class="error">{vaultError.value}</p>}
       </header>
-      <MarkdownEditor key={path} path={path} autofocus />
+      <MarkdownEditor
+        key={path}
+        path={path}
+        autofocus
+        onEditor={(v) => (editorRef.current = v)}
+        onHeadings={setHeadings}
+      />
+      {tocRight !== null && <Toc headings={headings} onJump={jump} right={tocRight} />}
     </div>
   );
 }
