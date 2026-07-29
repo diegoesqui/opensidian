@@ -15,6 +15,7 @@ import { javascript } from '@codemirror/lang-javascript';
 import { shell } from '@codemirror/legacy-modes/mode/shell';
 import { tags } from '@lezer/highlight';
 import { livePreview } from './live-preview';
+import { tablePreview } from './table-preview';
 import { formatKeymap, formatToolbar } from './format-toolbar';
 import { blockFormatKeymap } from './block-format';
 import { linkPasteHandling } from './paste-link';
@@ -80,6 +81,7 @@ export function createEditor(opts: EditorOptions): EditorView {
         markdown({ base: markdownLanguage, codeLanguages }),
         syntaxHighlighting(mdHighlight),
         livePreview(),
+        tablePreview(),
         formatToolbar(),
         keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
         formatKeymap(),
