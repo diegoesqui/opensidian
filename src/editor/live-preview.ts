@@ -1,5 +1,5 @@
 import { syntaxTree } from '@codemirror/language';
-import type { EditorState, Extension, Range, Text } from '@codemirror/state';
+import type { EditorState, Extension, Range } from '@codemirror/state';
 import {
   Decoration,
   type DecorationSet,
@@ -91,147 +91,6 @@ class HrWidget extends WidgetType {
     hr.addEventListener('mousedown', (e) => placeCursorOnClick(view, this.clickPos, e));
     return hr;
   }
-  ignoreEvent() {
-    return true;
-  }
-}
-
-type Align = 'left' | 'right' | 'center' | null;
-
-// La fila delimitadora (`| :--- | :---: |`) se representa en el árbol como
-// un único nodo TableDelimiter hijo directo de Table (a diferencia de los
-// marcadores de pipe de cada fila, que son hijos de TableHeader/TableRow),
-// así que basta leer su texto para saber la alineación de cada columna.
-function tableAlignment(doc: Text, tableNode: SyntaxNode): Align[] {
-  const delim = tableNode.getChild('TableDelimiter');
-  if (!delim) return [];
-  return doc
-    .sliceString(delim.from, delim.to)
-    .split('|')
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0)
-    .map((s) => {
-      const left = s.startsWith(':');
-      const right = s.endsWith(':');
-      if (left && right) return 'center';
-      if (right) return 'right';
-      if (left) return 'left';
-      return null;
-    });
-}
-
-// Recorre los hijos inline de una celda (o de un nodo de énfasis dentro de
-// ella) y construye los nodos DOM equivalentes, omitiendo los marcadores
-// (**, `, ~~). Nunca se usa innerHTML: el contenido es del usuario y hay
-// que evitar cualquier inyección de HTML.
-function renderInline(doc: Text, node: SyntaxNode, into: HTMLElement) {
-  let pos = node.from;
-  let child = node.firstChild;
-  if (!child) {
-    if (node.to > node.from) into.appendChild(document.createTextNode(doc.sliceString(node.from, node.to)));
-    return;
-  }
-  for (; child; child = child.nextSibling) {
-    if (child.from > pos) into.appendChild(document.createTextNode(doc.sliceString(pos, child.from)));
-    switch (child.name) {
-      case 'EmphasisMark':
-      case 'CodeMark':
-      case 'StrikethroughMark':
-        break; // el marcador no se muestra, solo determina el formato aplicado
-      case 'InlineCode': {
-        const code = document.createElement('code');
-        code.className = 'cm-inline-code';
-        renderInline(doc, child, code);
-        into.appendChild(code);
-        break;
-      }
-      case 'StrongEmphasis': {
-        const strong = document.createElement('strong');
-        renderInline(doc, child, strong);
-        into.appendChild(strong);
-        break;
-      }
-      case 'Emphasis': {
-        const em = document.createElement('em');
-        renderInline(doc, child, em);
-        into.appendChild(em);
-        break;
-      }
-      case 'Strikethrough': {
-        const s = document.createElement('s');
-        renderInline(doc, child, s);
-        into.appendChild(s);
-        break;
-      }
-      default:
-        renderInline(doc, child, into); // otros nodos (p. ej. enlaces): se conserva su texto
-    }
-    pos = child.to;
-  }
-  if (node.to > pos) into.appendChild(document.createTextNode(doc.sliceString(pos, node.to)));
-}
-
-function renderTableRow(doc: Text, rowNode: SyntaxNode, align: Align[], cellTag: 'th' | 'td'): HTMLTableRowElement {
-  const tr = document.createElement('tr');
-  rowNode.getChildren('TableCell').forEach((cell, i) => {
-    const el = document.createElement(cellTag);
-    if (align[i]) el.style.textAlign = align[i] as string;
-    renderInline(doc, cell, el);
-    tr.appendChild(el);
-  });
-  return tr;
-}
-
-class TableWidget extends WidgetType {
-  constructor(
-    readonly source: string,
-    readonly from: number
-  ) {
-    super();
-  }
-
-  // Compara el texto fuente de la tabla, no la posición: así CodeMirror no
-  // reconstruye el DOM de la tabla en cada actualización si no ha cambiado.
-  eq(other: TableWidget) {
-    return other.source === this.source;
-  }
-
-  toDOM(view: EditorView) {
-    const wrap = document.createElement('div');
-    wrap.className = 'cm-table-wrap';
-    wrap.addEventListener('mousedown', (e) => placeCursorOnClick(view, this.from, e));
-
-    // El widget solo guarda el texto fuente (para eq) y la posición; el
-    // árbol de sintaxis se vuelve a resolver aquí, en el árbol vigente.
-    let node: SyntaxNode | null = syntaxTree(view.state).resolveInner(this.from + 1, 1);
-    while (node && node.name !== 'Table') node = node.parent;
-    if (!node) {
-      wrap.textContent = this.source;
-      return wrap;
-    }
-
-    const doc = view.state.doc;
-    const align = tableAlignment(doc, node);
-    const table = document.createElement('table');
-    table.className = 'cm-table';
-
-    const headerNode = node.getChild('TableHeader');
-    if (headerNode) {
-      const thead = document.createElement('thead');
-      thead.appendChild(renderTableRow(doc, headerNode, align, 'th'));
-      table.appendChild(thead);
-    }
-
-    const tbody = document.createElement('tbody');
-    for (const rowNode of node.getChildren('TableRow')) {
-      tbody.appendChild(renderTableRow(doc, rowNode, align, 'td'));
-    }
-    table.appendChild(tbody);
-
-    wrap.appendChild(table);
-    return wrap;
-  }
-
   ignoreEvent() {
     return true;
   }
@@ -402,24 +261,18 @@ function build(view: EditorView): DecorationSet {
             }
             break;
 
-          case 'Table': {
-            const tableNode = node.node;
-            // A diferencia del resto de casos, aquí el criterio de selección
-            // debe cubrir la tabla entera (de su primera a su última línea),
-            // no solo la línea donde empieza el nodo: si el cursor está en
-            // cualquier fila, se edita el markdown fuente de toda la tabla.
-            if (selectedIn(tableNode.from, tableNode.to)) break;
-            ranges.push(
-              Decoration.replace({
-                widget: new TableWidget(doc.sliceString(tableNode.from, tableNode.to), tableNode.from),
-                block: true
-              }).range(tableNode.from, tableNode.to)
-            );
-            // Evita que se sigan generando decoraciones (EmphasisMark,
-            // CodeMark, etc.) para las celdas: ya están representadas en el
-            // widget y se solaparían con el rango que acabamos de reemplazar.
+          case 'Table':
+            // El render de las tablas (como <table> real) vive en su propio
+            // archivo, table-preview.ts, en un StateField y no aquí: un
+            // ViewPlugin no puede aportar decoraciones de bloque ni
+            // decoraciones replace que crucen saltos de línea (Codemirror
+            // lanza RangeError y desactiva ESTE plugin entero en silencio,
+            // ver el comentario de cabecera de table-preview.ts). Aun así
+            // hay que evitar bajar a las celdas: si no, este plugin seguiría
+            // generando decoraciones (ocultar **, `, ~~) sobre un rango que
+            // el otro StateField ya reemplaza por completo con su widget, y
+            // esas dos decoraciones solapadas rompen el render.
             return false;
-          }
         }
       }
     });
