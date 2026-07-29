@@ -9,6 +9,10 @@ interface Props {
 }
 
 const INDENT_PER_LEVEL = 14;
+// La sangría se escribe como estilo inline, así que pisa el padding lateral
+// que .toc-item trae del CSS: hay que repetir aquí el margen del nivel 1
+// para que los H1 no queden pegados al borde del panel.
+const BASE_INDENT = 10;
 
 /**
  * Índice flotante de la nota activa. Plegable: colapsado se reduce a un
@@ -48,7 +52,7 @@ export function Toc({ headings, onJump, right }: Props) {
           <li
             key={i}
             class="toc-item"
-            style={{ paddingLeft: `${(h.level - 1) * INDENT_PER_LEVEL}px` }}
+            style={{ paddingLeft: `${BASE_INDENT + (h.level - 1) * INDENT_PER_LEVEL}px` }}
             title={h.text}
             onClick={() => onJump(h.pos)}
           >

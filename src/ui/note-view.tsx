@@ -102,14 +102,20 @@ export function NoteView({ path }: { path: string }) {
     editorRef.current = null;
   }, [path]);
 
+  // El scroll suave se activa solo mientras dura el salto. Dejarlo puesto en
+  // `.main` animaría también el scroll con el que CodeMirror sigue al cursor
+  // al escribir cerca del borde del viewport, y eso se percibe como lentitud.
   const jump = (pos: number) => {
     const view = editorRef.current;
     if (!view) return;
+    const scroller = rootRef.current?.parentElement;
+    scroller?.classList.add('scroll-suave');
     view.dispatch({
       selection: { anchor: pos },
       effects: EditorView.scrollIntoView(pos, { y: 'start', yMargin: 20 })
     });
     view.focus();
+    setTimeout(() => scroller?.classList.remove('scroll-suave'), 700);
   };
 
   return (

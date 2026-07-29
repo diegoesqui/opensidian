@@ -220,6 +220,12 @@ kbd {
   flex: 1;
   overflow-y: auto;
   min-width: 0;
+}
+
+/* La pone y la quita NoteView alrededor de un salto del índice: si el scroll
+   suave quedara siempre activo, animaría también el scroll con el que
+   CodeMirror sigue al cursor mientras se escribe. */
+.main.scroll-suave {
   scroll-behavior: smooth;
 }
 
