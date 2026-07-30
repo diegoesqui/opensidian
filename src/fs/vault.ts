@@ -21,6 +21,18 @@ export interface Vault {
   rename(oldPath: string, newPath: string): Promise<void>;
   exists(path: string): Promise<boolean>;
   lastModified(path: string): Promise<number | null>;
+  /** Mueve path a la papelera (issue #10), resolviendo colisiones de nombre;
+   * devuelve la ruta final dentro de TRASH_DIR. */
+  moveToTrash(path: string, kind: 'file' | 'dir'): Promise<string>;
+  /** Contenido de primer nivel de la papelera, tal cual está en disco (sin
+   * filtrar por extensión: puede haber notas o carpetas con cualquier cosa
+   * dentro). */
+  listTrash(): Promise<VaultEntry[]>;
+  /** Restaura un elemento de la papelera a destPath. Lanza si destPath ya
+   * existe: restaurar nunca pisa nada en silencio. */
+  restoreFromTrash(trashPath: string, destPath: string): Promise<void>;
+  /** Borrado real y definitivo de todo el contenido de la papelera. */
+  emptyTrash(): Promise<void>;
 }
 
 export const NOTE_EXT = /\.(md|markdown|txt)$/i;
@@ -32,6 +44,18 @@ export const NOTE_EXT = /\.(md|markdown|txt)$/i;
  * (editor/images.ts) importa el nombre desde aquí, no al revés.
  */
 export const ASSETS_DIR = 'assets';
+
+/**
+ * Papelera del vault (issue #10): borrar mueve aquí en vez de llamar a
+ * removeEntry() directamente, que no pasa por la papelera del sistema
+ * operativo y es irreversible. El nombre empieza por '.' a propósito: tanto
+ * listTree() como listAllPaths() ya saltan cualquier entrada que empiece por
+ * '.', así que la papelera queda oculta del árbol de notas y de la
+ * exportación a zip sin añadir un filtro nuevo (ver comentario en
+ * listAllPaths sobre por qué esto último es una decisión, no un efecto
+ * colateral).
+ */
+export const TRASH_DIR = '.trash';
 
 function iterate(dir: FileSystemDirectoryHandle): AsyncIterable<FileSystemHandle> {
   return (dir as unknown as { values(): AsyncIterable<FileSystemHandle> }).values();
@@ -121,7 +145,17 @@ export class HandleVault implements Vault {
   /** Todas las rutas de archivo del vault, sin filtrar por extensión: a
    * diferencia de listTree() (que solo lista notas, para la barra lateral y
    * la búsqueda), esta se usa para exportar el vault completo, binarios
-   * incluidos. */
+   * incluidos.
+   *
+   * Decisión (issue #10): la papelera (TRASH_DIR) NO entra en el zip
+   * exportado. El filtro de '.' de aquí abajo ya la excluye porque su nombre
+   * empieza por punto, pero es intencional y no un efecto colateral: exportar
+   * es "llévate una copia de mis notas", y las notas que están en la papelera
+   * son justo las que el usuario decidió quitar de en medio -incluirlas
+   * resucitaría en el zip algo que se pidió borrar, y además podría traer
+   * duplicados con sufijo raro (p. ej. "Nota 2.md") fruto de colisiones al
+   * borrar-. Si se quiere conservar una nota borrada, la vía es restaurarla
+   * primero (panel de la papelera) y exportar después. */
   async listAllPaths(): Promise<string[]> {
     const paths: string[] = [];
     const walk = async (dir: FileSystemDirectoryHandle, path: string): Promise<void> => {
@@ -204,6 +238,72 @@ export class HandleVault implements Vault {
     } else {
       await this.copyDirInto(await this.dirFor(oldPath), newPath);
       await this.deleteDir(oldPath);
+    }
+  }
+
+  /** Igual que freePath() en state.ts pero sin asumir que todo es una nota:
+   * esa función usa extOf(), que para algo sin extensión de nota devuelve
+   * '.md' por defecto (pensado para crear notas), y aquí también entran
+   * carpetas, a las que ese '.md' de más les quedaría mal. */
+  private async freeNameIn(dirPath: string, name: string, kind: 'file' | 'dir'): Promise<string> {
+    const dot = kind === 'file' ? name.lastIndexOf('.') : -1;
+    const base = dot > 0 ? name.slice(0, dot) : name;
+    const ext = dot > 0 ? name.slice(dot) : '';
+    for (let i = 1; ; i++) {
+      const candidate = i === 1 ? name : `${base} ${i}${ext}`;
+      const path = dirPath ? `${dirPath}/${candidate}` : candidate;
+      if (!(await this.exists(path))) return path;
+    }
+  }
+
+  async moveToTrash(path: string, kind: 'file' | 'dir'): Promise<string> {
+    // Borrar algo que ya está en la papelera no tiene ruta de UI (listTree()
+    // la oculta del árbol, así que nada puede seleccionarla para "Eliminar"),
+    // pero por si se llama directamente es un no-op: no tiene sentido una
+    // papelera dentro de la papelera.
+    if (path === TRASH_DIR || path.startsWith(`${TRASH_DIR}/`)) return path;
+    await this.dirFor(TRASH_DIR, true);
+    const [, name] = this.split(path);
+    const trashPath = await this.freeNameIn(TRASH_DIR, name, kind);
+    await this.rename(path, trashPath);
+    return trashPath;
+  }
+
+  async listTrash(): Promise<VaultEntry[]> {
+    let dir: FileSystemDirectoryHandle;
+    try {
+      dir = await this.dirFor(TRASH_DIR);
+    } catch {
+      return []; // la papelera aún no existe: está vacía
+    }
+    const out: VaultEntry[] = [];
+    for await (const handle of iterate(dir)) {
+      out.push({
+        name: handle.name,
+        path: `${TRASH_DIR}/${handle.name}`,
+        kind: handle.kind === 'directory' ? 'dir' : 'file'
+      });
+    }
+    out.sort((a, b) =>
+      a.kind !== b.kind
+        ? a.kind === 'dir' ? -1 : 1
+        : a.name.localeCompare(b.name, 'es', { sensitivity: 'base', numeric: true })
+    );
+    return out;
+  }
+
+  async restoreFromTrash(trashPath: string, destPath: string): Promise<void> {
+    if (await this.exists(destPath)) {
+      throw new Error(`Ya existe «${destPath.split('/').pop()}» en el destino.`);
+    }
+    await this.rename(trashPath, destPath);
+  }
+
+  async emptyTrash(): Promise<void> {
+    try {
+      await this.deleteDir(TRASH_DIR);
+    } catch {
+      // no existía: nada que vaciar
     }
   }
 }

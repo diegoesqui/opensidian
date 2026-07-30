@@ -41,8 +41,18 @@ export function markDeleted(path: string) {
   deletedPaths.add(path);
 }
 
+/**
+ * Deja de considerar borrado a `path`. Quita también las marcas de sus
+ * carpetas antecesoras, porque isDeleted() empareja por prefijo: si se borró
+ * la carpeta «Trabajo» y luego vuelve a existir algo en «Trabajo/Nota.md»
+ * (restaurado de la papelera, movido ahí, o creado de nuevo), la marca vieja
+ * de la carpeta seguiría dando ese archivo por borrado y su editor **dejaría
+ * de guardar en silencio**.
+ */
 export function unmarkDeleted(path: string) {
-  deletedPaths.delete(path);
+  for (const d of deletedPaths) {
+    if (path === d || path.startsWith(d + '/')) deletedPaths.delete(d);
+  }
 }
 
 export function isDeleted(path: string): boolean {
