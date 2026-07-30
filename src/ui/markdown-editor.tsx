@@ -15,8 +15,10 @@ interface Props {
   placeholder?: string;
   /** Expone el EditorView al padre (p. ej. para que el índice flotante pueda saltar a un encabezado). */
   onEditor?: (view: EditorView | null) => void;
-  /** Notifica los encabezados de la nota cada vez que cambian, para alimentar el índice flotante. */
+  /** Notifica los encabezados de la nota cada vez que cambian, para alimentar el índice. */
   onHeadings?: (headings: Heading[]) => void;
+  /** Índice del encabezado en el que está el cursor (-1 si va antes del primero). */
+  onActiveHeading?: (index: number) => void;
 }
 
 /**
@@ -24,7 +26,14 @@ interface Props {
  * guarda con debounce mientras se escribe y recarga si el archivo
  * cambia en disco al recuperar el foco.
  */
-export function MarkdownEditor({ path, autofocus, placeholder, onEditor, onHeadings }: Props) {
+export function MarkdownEditor({
+  path,
+  autofocus,
+  placeholder,
+  onEditor,
+  onHeadings,
+  onActiveHeading
+}: Props) {
   const host = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -79,7 +88,7 @@ export function MarkdownEditor({ path, autofocus, placeholder, onEditor, onHeadi
         extraExtensions: [
           linkClickHandling((title) => void openOrCreateWikiLink(title)),
           wikiLinkAutocomplete(() => filePaths.value.map(titleOf)),
-          ...(onHeadings ? [headingsTracker(onHeadings)] : [])
+          ...(onHeadings ? [headingsTracker(onHeadings, onActiveHeading ?? (() => {}))] : [])
         ]
       });
       onEditor?.(view);

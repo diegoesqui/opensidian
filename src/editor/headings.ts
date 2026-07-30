@@ -44,26 +44,44 @@ function sameHeadings(a: Heading[], b: Heading[]): boolean {
 
 /**
  * Extensión que extrae los encabezados (# a ######) del documento completo
- * y notifica al índice flotante cuando cambian. Se recalcula también si el
- * árbol de sintaxis cambia sin `docChanged` (parseo diferido en documentos
- * grandes que se completa en segundo plano), igual que hace live-preview.
+ * y notifica al índice cuando cambian, junto con cuál es el encabezado en el
+ * que está el cursor. Se recalcula también si el árbol de sintaxis cambia sin
+ * `docChanged` (parseo diferido en documentos grandes que se completa en
+ * segundo plano), igual que hace live-preview.
  */
-export function headingsTracker(onChange: (headings: Heading[]) => void): Extension {
+export function headingsTracker(
+  onChange: (headings: Heading[]) => void,
+  onActive: (index: number) => void
+): Extension {
   return ViewPlugin.fromClass(
     class {
       headings: Heading[];
+      active = -1;
       constructor(view: EditorView) {
         this.headings = extractHeadings(view);
         onChange(this.headings);
+        this.syncActive(view);
       }
       update(update: ViewUpdate) {
-        if (!update.docChanged && syntaxTree(update.state) === syntaxTree(update.startState)) {
-          return;
+        const treeChanged = syntaxTree(update.state) !== syntaxTree(update.startState);
+        if (update.docChanged || treeChanged) {
+          const next = extractHeadings(update.view);
+          if (!sameHeadings(this.headings, next)) {
+            this.headings = next;
+            onChange(next);
+          }
         }
-        const next = extractHeadings(update.view);
-        if (!sameHeadings(this.headings, next)) {
-          this.headings = next;
-          onChange(next);
+        if (update.docChanged || update.selectionSet || treeChanged) this.syncActive(update.view);
+      }
+      // El encabezado activo es el último que queda por encima del cursor
+      // (-1 mientras el cursor está en el texto anterior al primero).
+      syncActive(view: EditorView) {
+        const pos = view.state.selection.main.head;
+        let i = -1;
+        while (i + 1 < this.headings.length && this.headings[i + 1].pos <= pos) i++;
+        if (i !== this.active) {
+          this.active = i;
+          onActive(i);
         }
       }
     }

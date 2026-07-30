@@ -809,44 +809,35 @@ button.icon.danger:hover {
   }
 }
 
-/* ========== Índice flotante (ToC) ==========
-   `position: fixed` para no desplazarse con el scroll de la nota; `right`
-   llega por estilo inline desde NoteView, calculado a partir del borde real
-   de `.note-view` (no del de la ventana), así no queda descolocado cuando
-   se pliega la barra lateral. `top` es constante: `.main` ocupa toda la
-   altura y no se desplaza como bloque, solo su contenido. */
-.toc-panel {
-  position: fixed;
-  top: 20px;
-  z-index: 30;
-  width: 200px;
-  max-height: min(65vh, 480px);
+/* ========== Índice de la nota ==========
+   Columna del layout a la derecha, espejo de la barra lateral izquierda:
+   panel plano (sin sombra ni bordes redondeados) que se pliega a un raíl
+   estrecho con solo el botón. */
+.outline {
+  width: 232px;
+  flex-shrink: 0;
+  background: var(--bg-side);
+  border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
   overflow: hidden;
 }
 
-.toc-panel.toc-collapsed {
-  width: auto;
-  background: none;
-  border: none;
-  box-shadow: none;
+.outline.collapsed {
+  width: 44px;
+  align-items: center;
+  padding-top: 12px;
 }
 
-.toc-header {
+.outline-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  padding: 7px 6px 7px 10px;
-  border-bottom: 1px solid var(--border);
+  padding: 12px 8px 8px 14px;
 }
 
-.toc-title {
+.outline-title {
   font-size: 11px;
   font-weight: 650;
   letter-spacing: 0.04em;
@@ -854,30 +845,18 @@ button.icon.danger:hover {
   color: var(--muted);
 }
 
-.toc-toggle {
-  width: 24px;
-  height: 24px;
-  font-size: 13px;
-}
-
-.toc-collapsed .toc-toggle {
-  width: 30px;
-  height: 30px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-}
-
-.toc-list {
+.outline-list {
   list-style: none;
   margin: 0;
-  padding: 4px 0;
+  padding: 0 6px 12px;
   overflow-y: auto;
 }
 
-.toc-item {
-  padding: 4px 10px;
+.outline-item {
+  padding: 4px 8px;
+  border-radius: 5px;
   font-size: 12.5px;
+  line-height: 1.45;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
@@ -885,9 +864,21 @@ button.icon.danger:hover {
   cursor: pointer;
 }
 
-.toc-item:hover {
+.outline-item:hover {
   background: var(--bg-hover);
   color: var(--fg);
+}
+
+.outline-item.active {
+  background: var(--bg-active);
+  color: var(--fg);
+}
+
+.outline-empty {
+  margin: 0;
+  padding: 2px 14px;
+  font-size: 12.5px;
+  color: var(--faint);
 }
 
 /* ========== Diario ========== */
