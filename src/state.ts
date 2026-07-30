@@ -204,6 +204,10 @@ async function movePath(path: string, kind: 'file' | 'dir', newPath: string): Pr
   else if (open && kind === 'dir' && open.startsWith(path + '/')) {
     currentPath.value = newPath + open.slice(path.length);
   }
+  // En el destino hay ahora algo real: si esa ruta arrastraba una marca de
+  // borrado antigua, su editor no volvería a guardar nunca. Pasa al restaurar
+  // de la papelera a la raíz y arrastrar la nota de vuelta a su carpeta.
+  unmarkDeleted(newPath);
   notifyRenamed(path, newPath, kind);
   if (oldTitle !== null && newTitle !== null && oldTitle !== newTitle) {
     await updateLinksAfterRename(v, oldTitle, newTitle);
