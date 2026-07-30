@@ -15,8 +15,8 @@ export async function flushAll(): Promise<void> {
   await Promise.allSettled([...flushers].map((fn) => fn()));
 }
 
-// Solo hay un editor de nota montado a la vez, pero igual se indexa por ruta
-// (no una única referencia global) para no depender de ese detalle de la UI.
+// Se indexa por ruta porque la vista de diario monta varios editores a la vez
+// (uno por día), así que no vale una única referencia global.
 export function registerReloader(path: string, fn: ReloadFn): () => void {
   reloaders.set(path, fn);
   return () => {

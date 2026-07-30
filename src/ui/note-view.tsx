@@ -85,7 +85,7 @@ export function NoteView({ path }: { path: string }) {
         onHeadings={(h) => (outlineHeadings.value = h)}
         onActiveHeading={(i) => (outlineActive.value = i)}
       />
-      <Backlinks key={path} path={path} />
+      <Backlinks path={path} />
     </div>
   );
 }
