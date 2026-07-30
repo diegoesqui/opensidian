@@ -1131,6 +1131,38 @@ button.icon.danger:hover {
   cursor: default;
 }
 
+/* ========== Papelera ========== */
+.trash-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px 6px;
+}
+
+.trash-title {
+  flex: 1;
+  font-weight: 600;
+}
+
+.trash-list li {
+  cursor: default;
+  justify-content: space-between;
+}
+
+.trash-list li:hover {
+  background: none;
+}
+
+.trash-footer {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.trash-empty-btn {
+  color: var(--danger);
+}
+
 /* ========== Autocompletar [[wiki-links]] ========== */
 .cm-tooltip.cm-tooltip-autocomplete {
   background: var(--bg);

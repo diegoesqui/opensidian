@@ -10,6 +10,7 @@ import {
   quickOpen,
   renameEntry,
   switchVault,
+  trashEntries,
   tree,
   vault,
   view
@@ -19,6 +20,7 @@ import { exportZip } from '../fs/export';
 import { parentOf } from '../util';
 import { cycleTheme, themeIcon, themeLabel } from './theme';
 import { sidebarCollapsed, toggleSidebar } from './layout';
+import { trashOpen } from './trash';
 
 /** Icono de panel lateral (distinto del de cambiar de carpeta, para no confundirlos). */
 function SidebarToggleIcon() {
@@ -375,6 +377,9 @@ export function Sidebar() {
         )}
       </div>
       <div class="sidebar-footer">
+        <button class="btn subtle small" onClick={() => (trashOpen.value = true)}>
+          🗑️ Papelera{trashEntries.value.length ? ` (${trashEntries.value.length})` : ''}
+        </button>
         <button class="btn subtle small" onClick={() => void switchVault()}>
           📂 Cambiar carpeta de notas
         </button>

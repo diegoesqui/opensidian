@@ -30,10 +30,17 @@ export const currentPath = signal<string | null>(null);
 export const storedVaultName = signal<string | null>(null);
 export const quickOpen = signal(false);
 export const vaultError = signal<string | null>(null);
+/** Contenido de la papelera (issue #10), para el panel que la muestra. */
+export const trashEntries = signal<VaultEntry[]>([]);
 
 export async function refreshTree(): Promise<void> {
   const v = vault.value;
   tree.value = v ? await v.listTree() : null;
+}
+
+export async function refreshTrash(): Promise<void> {
+  const v = vault.value;
+  trashEntries.value = v ? await v.listTrash() : [];
 }
 
 async function activateVault(v: Vault): Promise<void> {
@@ -42,6 +49,7 @@ async function activateVault(v: Vault): Promise<void> {
   currentPath.value = null;
   view.value = 'journal';
   await refreshTree();
+  void refreshTrash();
   void buildIndex(v);
 }
 
@@ -87,6 +95,7 @@ export async function switchVault(): Promise<void> {
   vault.value = null;
   tree.value = null;
   currentPath.value = null;
+  trashEntries.value = [];
   resetIndex();
 }
 
@@ -237,18 +246,62 @@ export async function moveEntry(entry: VaultEntry, destDir: string): Promise<voi
   await movePath(entry.path, entry.kind, newPath);
 }
 
+/**
+ * Borrar (issue #10) ya no llama a deleteFile()/deleteDir(): eso pasa por
+ * removeEntry() de la File System Access API, que no pasa por la papelera
+ * del sistema operativo y es irreversible. Ahora se mueve a la papelera del
+ * propio vault (ver moveToTrash en fs/vault.ts, que resuelve colisiones de
+ * nombre) y se puede restaurar o vaciar de verdad desde el panel de la
+ * papelera.
+ */
 export async function deleteEntry(entry: VaultEntry): Promise<void> {
   const v = vault.value;
   if (!v) return;
+  await flushAll(); // que la papelera se quede con lo último editado, no con lo último guardado
   markDeleted(entry.path);
-  if (entry.kind === 'file') await v.deleteFile(entry.path);
-  else await v.deleteDir(entry.path);
   const open = currentPath.value;
   if (open && (open === entry.path || open.startsWith(entry.path + '/'))) {
     currentPath.value = null;
   }
+  await v.moveToTrash(entry.path, entry.kind);
   notifyDeleted(entry.path, entry.kind);
   await refreshTree();
+  await refreshTrash();
+}
+
+/**
+ * Restaura un elemento de la papelera a la raíz del vault (issue #10). No se
+ * recuerda la carpeta original: guardarla exigiría un fichero de manifiesto
+ * aparte dentro de .trash/, y para una papelera plana no compensa la
+ * complejidad. Si se quiere en otro sitio, se arrastra después con el drag &
+ * drop habitual de la barra lateral. Si ya hay algo con ese nombre en la
+ * raíz, se avisa (vaultError) en vez de pisarlo en silencio.
+ */
+export async function restoreEntry(entry: VaultEntry): Promise<void> {
+  const v = vault.value;
+  if (!v) return;
+  try {
+    await v.restoreFromTrash(entry.path, entry.name);
+  } catch (e) {
+    vaultError.value = e instanceof Error ? e.message : String(e);
+    return;
+  }
+  unmarkDeleted(entry.name);
+  await refreshTree();
+  await refreshTrash();
+  // Reconstruye el índice entero en vez de parchear búsqueda y backlinks a
+  // mano: restaurar es una acción poco frecuente, así que el coste de
+  // recorrer el vault de nuevo es asumible y evita duplicar la lógica de
+  // notifySaved/indexLinks para un caso que ya cubre buildIndex().
+  await buildIndex(v);
+}
+
+/** Vacía la papelera para siempre (issue #10): aquí sí es un borrado real y sin vuelta atrás. */
+export async function emptyTrash(): Promise<void> {
+  const v = vault.value;
+  if (!v) return;
+  await v.emptyTrash();
+  await refreshTrash();
 }
 
 export async function initApp(): Promise<void> {

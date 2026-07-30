@@ -6,6 +6,7 @@ import { JournalView } from './journal';
 import { SearchPanel } from './search-panel';
 import { QuickSwitcher } from './quick-switcher';
 import { Outline } from './outline';
+import { TrashPanel, trashOpen } from './trash';
 
 function EmptyState() {
   return (
@@ -36,6 +37,7 @@ export function App() {
       {/* El índice solo acompaña a una nota: el diario y la búsqueda no lo usan. */}
       {view.value === 'note' && currentPath.value && <Outline />}
       {quickOpen.value && <QuickSwitcher />}
+      {trashOpen.value && <TrashPanel />}
     </div>
   );
 }
