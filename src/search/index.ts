@@ -2,6 +2,10 @@ import MiniSearch from 'minisearch';
 import { signal } from '@preact/signals';
 import type { Vault, VaultEntry } from '../fs/vault';
 import { normalize, titleOf } from '../util';
+import { renameWikiLinks } from '../wikilink';
+import { indexLinks, notesLinkingTo, removeLinks, resetLinks } from './links';
+
+export { backlinksFor, linksVersion } from './links';
 
 export interface NoteHit {
   path: string;
@@ -44,6 +48,7 @@ export function resetIndex() {
   contents.clear();
   filePaths.value = [];
   indexReady.value = false;
+  resetLinks();
 }
 
 export async function buildIndex(v: Vault): Promise<void> {
@@ -60,6 +65,7 @@ export async function buildIndex(v: Vault): Promise<void> {
       const content = await v.readFile(path);
       contents.set(path, content);
       mini.add(docFor(path, content));
+      indexLinks(path, content);
     } catch {
       // archivo ilegible: se omite del índice
     }
@@ -81,6 +87,7 @@ export function notifySaved(path: string, content: string) {
     filePaths.value = [...filePaths.value, path].sort();
   }
   mini.add(docFor(path, content));
+  indexLinks(path, content);
 }
 
 export function notifyDeleted(path: string, kind: 'file' | 'dir') {
@@ -93,6 +100,7 @@ export function notifyDeleted(path: string, kind: 'file' | 'dir') {
     } catch {
       // no estaba en el índice
     }
+    removeLinks(p);
   }
   filePaths.value = filePaths.value.filter((p) => !gone(p));
 }
@@ -109,8 +117,29 @@ export function notifyRenamed(oldPath: string, newPath: string, kind: 'file' | '
     notifyDeleted(from, 'file');
     contents.set(to, content);
     mini.add(docFor(to, content));
+    indexLinks(to, content);
   }
   filePaths.value = [...contents.keys()].sort();
+}
+
+/**
+ * Para el renombrado (issue #8): notas cuyo contenido menciona `[[oldTitle]]`
+ * junto con ese texto ya reescrito a `[[newTitle]]`. No escribe en el vault
+ * ni actualiza el índice -eso es responsabilidad de quien la llama, que sabe
+ * cómo persistir el cambio y avisar a los editores abiertos-.
+ */
+export function rewriteLinksTo(
+  oldTitle: string,
+  newTitle: string
+): Array<{ path: string; content: string }> {
+  const out: Array<{ path: string; content: string }> = [];
+  for (const path of notesLinkingTo(oldTitle)) {
+    const content = contents.get(path);
+    if (content === undefined) continue;
+    const rewritten = renameWikiLinks(content, oldTitle, newTitle);
+    if (rewritten !== null) out.push({ path, content: rewritten });
+  }
+  return out;
 }
 
 /** Búsqueda full-text con snippet alrededor de la primera coincidencia. */

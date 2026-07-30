@@ -9,6 +9,7 @@ import {
   WidgetType
 } from '@codemirror/view';
 import type { SyntaxNode, SyntaxNodeRef } from '@lezer/common';
+import { WIKILINK_RE } from '../wikilink';
 
 /**
  * Live preview estilo Obsidian: los marcadores markdown (#, **, ``, - […])
@@ -112,8 +113,6 @@ function listDepth(node: SyntaxNodeRef): number {
   }
   return depth;
 }
-
-const WIKILINK_RE = /\[\[([^[\]]+)\]\]/g;
 
 function isInCode(state: EditorState, pos: number): boolean {
   let n: SyntaxNode | null = syntaxTree(state).resolveInner(pos, 1);

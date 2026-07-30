@@ -8,8 +8,16 @@ import {
   type VaultEntry
 } from './fs/vault';
 import { clearHandle, loadHandle, storeHandle } from './fs/handle-store';
-import { flushAll, markDeleted, unmarkDeleted } from './editor/autosave';
-import { buildIndex, filePaths, notifyDeleted, notifyRenamed, notifySaved, resetIndex } from './search';
+import { flushAll, markDeleted, notifyExternalChange, unmarkDeleted } from './editor/autosave';
+import {
+  buildIndex,
+  filePaths,
+  notifyDeleted,
+  notifyRenamed,
+  notifySaved,
+  resetIndex,
+  rewriteLinksTo
+} from './search';
 import { seedDemoVault } from './fs/demo';
 import { extOf, normalize, parentOf, titleOf } from './util';
 
@@ -139,6 +147,34 @@ export async function createFolder(dirPath: string, rawName: string): Promise<vo
   await refreshTree();
 }
 
+/**
+ * Reescribe (issue #8) los `[[Título antiguo]]` de las demás notas -y de la
+ * propia, si se autoenlazaba- a `[[Título nuevo]]`, cuando el título de una
+ * nota cambia de verdad (no al moverla de carpeta: ahí el nombre de archivo,
+ * y por tanto el título, no cambia).
+ *
+ * flushAll() ya se llamó antes de tocar el disco (ver movePath), así que el
+ * índice de contenidos refleja lo último guardado, incluida cualquier nota
+ * que estuviera abierta con cambios pendientes. Tras escribir cada nota
+ * afectada se avisa con notifySaved (para que el índice de búsqueda/enlaces
+ * no quede desactualizado) y con notifyExternalChange (para que, si esa nota
+ * está abierta en el editor ahora mismo, se recargue sin esperar a un
+ * foco/desenfoque de la ventana -si no, su próximo autoguardado
+ * sobrescribiría la reescritura con el contenido antiguo que aún tiene en
+ * memoria-).
+ */
+async function updateLinksAfterRename(v: Vault, oldTitle: string, newTitle: string): Promise<void> {
+  for (const { path, content } of rewriteLinksTo(oldTitle, newTitle)) {
+    try {
+      await v.writeFile(path, content);
+      notifySaved(path, content);
+      await notifyExternalChange(path);
+    } catch (e) {
+      console.error('No se pudieron actualizar los enlaces en', path, e);
+    }
+  }
+}
+
 /** Primitiva común a renombrar y mover: reubica path -> newPath. */
 async function movePath(path: string, kind: 'file' | 'dir', newPath: string): Promise<boolean> {
   const v = vault.value;
@@ -148,6 +184,11 @@ async function movePath(path: string, kind: 'file' | 'dir', newPath: string): Pr
     return false;
   }
   await flushAll();
+  // El título solo cambia si es un archivo Y su nombre (sin extensión)
+  // cambia; mover de carpeta conserva el nombre, así que ahí no hace falta
+  // reescribir nada.
+  const oldTitle = kind === 'file' ? titleOf(path) : null;
+  const newTitle = kind === 'file' ? titleOf(newPath) : null;
   await v.rename(path, newPath);
   const open = currentPath.value;
   if (open === path) currentPath.value = newPath;
@@ -155,6 +196,9 @@ async function movePath(path: string, kind: 'file' | 'dir', newPath: string): Pr
     currentPath.value = newPath + open.slice(path.length);
   }
   notifyRenamed(path, newPath, kind);
+  if (oldTitle !== null && newTitle !== null && oldTitle !== newTitle) {
+    await updateLinksAfterRename(v, oldTitle, newTitle);
+  }
   await refreshTree();
   return true;
 }

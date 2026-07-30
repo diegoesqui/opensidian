@@ -3,6 +3,7 @@ import { titleOf, parentOf } from '../util';
 import { renameNoteTitle, vaultError } from '../state';
 import { MarkdownEditor } from './markdown-editor';
 import { clearOutline, outlineActive, outlineEditor, outlineHeadings } from './outline';
+import { Backlinks } from './backlinks';
 
 function EditableTitle({ path }: { path: string }) {
   const [editing, setEditing] = useState(false);
@@ -84,6 +85,7 @@ export function NoteView({ path }: { path: string }) {
         onHeadings={(h) => (outlineHeadings.value = h)}
         onActiveHeading={(i) => (outlineActive.value = i)}
       />
+      <Backlinks path={path} />
     </div>
   );
 }

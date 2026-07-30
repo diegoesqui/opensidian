@@ -809,6 +809,60 @@ button.icon.danger:hover {
   }
 }
 
+/* ========== Backlinks (menciones entrantes) ==========
+   Va al pie de la nota, dentro del mismo flujo de scroll que el editor. Si
+   no hay menciones el componente no se monta, así que este bloque no
+   estorba nunca. */
+.backlinks {
+  margin-top: 24px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.backlinks-title {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 6px;
+}
+
+.backlinks-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.backlinks-item {
+  padding: 6px 10px;
+  margin: 0 -10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.backlinks-item:hover {
+  background: var(--bg-hover);
+}
+
+.backlinks-source {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.backlinks-context {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ========== Índice de la nota ==========
    Columna del layout a la derecha, espejo de la barra lateral izquierda:
    panel plano (sin sombra ni bordes redondeados) que se pliega a un raíl
