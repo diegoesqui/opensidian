@@ -5,7 +5,7 @@ import { createEditor } from '../editor/editor';
 import { linkClickHandling } from '../editor/live-preview';
 import { wikiLinkAutocomplete } from '../editor/wikilink-autocomplete';
 import { headingsTracker, type Heading } from '../editor/headings';
-import { isDeleted, registerFlusher } from '../editor/autosave';
+import { isDeleted, registerFlusher, registerReloader } from '../editor/autosave';
 import { filePaths, notifySaved } from '../search';
 import { titleOf } from '../util';
 
@@ -95,7 +95,11 @@ export function MarkdownEditor({
       if (autofocus) view.focus();
     })();
 
-    const onWindowFocus = async () => {
+    // Recarga desde disco si cambió por fuera de este editor (otra pestaña,
+    // sincronización, o -issue #8- la reescritura de enlaces al renombrar
+    // otra nota). Se usa tanto al recuperar el foco de la ventana como desde
+    // el canal explícito de autosave.ts, para no depender de ese foco.
+    const reloadIfChanged = async () => {
       if (!view || dirty || isDeleted(path)) return;
       const mtime = await v.lastModified(path);
       if (mtime === null || mtime === knownMtime) return;
@@ -108,14 +112,16 @@ export function MarkdownEditor({
       }
       knownMtime = mtime;
     };
-    window.addEventListener('focus', onWindowFocus);
+    window.addEventListener('focus', reloadIfChanged);
+    const unregisterReloader = registerReloader(path, reloadIfChanged);
 
     return () => {
       disposed = true;
       clearTimeout(timer);
       void save();
       unregister();
-      window.removeEventListener('focus', onWindowFocus);
+      unregisterReloader();
+      window.removeEventListener('focus', reloadIfChanged);
       onEditor?.(null);
       view?.destroy();
       view = null;
