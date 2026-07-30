@@ -25,6 +25,14 @@ export interface Vault {
 
 export const NOTE_EXT = /\.(md|markdown|txt)$/i;
 
+/**
+ * Carpeta del vault donde se guardan las imágenes pegadas o arrastradas.
+ * Vive aquí, en la capa del vault, porque es parte de su disposición en
+ * disco: `listTree()` la oculta del árbol de notas y quien escriba en ella
+ * (editor/images.ts) importa el nombre desde aquí, no al revés.
+ */
+export const ASSETS_DIR = 'assets';
+
 function iterate(dir: FileSystemDirectoryHandle): AsyncIterable<FileSystemHandle> {
   return (dir as unknown as { values(): AsyncIterable<FileSystemHandle> }).values();
 }
@@ -61,6 +69,11 @@ export class HandleVault implements Vault {
       const children: VaultEntry[] = [];
       for await (const handle of iterate(dir)) {
         if (handle.name.startsWith('.')) continue;
+        // La carpeta de imágenes es almacenamiento interno, no notas: en el
+        // árbol se vería siempre vacía (solo se listan archivos con
+        // NOTE_EXT) y solo estorbaría. listAllPaths() sí la incluye, que es
+        // lo que hace que los binarios entren en la exportación a zip.
+        if (!path && handle.kind === 'directory' && handle.name === ASSETS_DIR) continue;
         const childPath = path ? `${path}/${handle.name}` : handle.name;
         if (handle.kind === 'directory') {
           children.push(await walk(handle as FileSystemDirectoryHandle, childPath));

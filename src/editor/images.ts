@@ -1,7 +1,6 @@
-import type { Vault } from '../fs/vault';
+import { ASSETS_DIR, type Vault } from '../fs/vault';
 
-/** Carpeta del vault donde se guardan las imágenes pegadas o arrastradas. */
-export const ASSETS_DIR = 'assets';
+export { ASSETS_DIR };
 
 const MIME_TO_EXT: Record<string, string> = {
   'image/png': 'png',
