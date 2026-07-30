@@ -260,6 +260,19 @@ function build(view: EditorView): DecorationSet {
               );
             }
             break;
+
+          case 'Table':
+            // El render de las tablas (como <table> real) vive en su propio
+            // archivo, table-preview.ts, en un StateField y no aquí: un
+            // ViewPlugin no puede aportar decoraciones de bloque ni
+            // decoraciones replace que crucen saltos de línea (Codemirror
+            // lanza RangeError y desactiva ESTE plugin entero en silencio,
+            // ver el comentario de cabecera de table-preview.ts). Aun así
+            // hay que evitar bajar a las celdas: si no, este plugin seguiría
+            // generando decoraciones (ocultar **, `, ~~) sobre un rango que
+            // el otro StateField ya reemplaza por completo con su widget, y
+            // esas dos decoraciones solapadas rompen el render.
+            return false;
         }
       }
     });

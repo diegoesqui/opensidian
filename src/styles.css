@@ -692,6 +692,36 @@ button.icon.danger:hover {
   margin: 2px 0;
 }
 
+/* Tablas del live preview. El contenedor absorbe el desbordamiento
+   horizontal (scroll propio) para que una tabla ancha no ensanche ni rompa
+   el editor. Padding, no margin, en el widget: ver nota sobre cm-line-h1
+   más arriba, el mismo motivo aplica a la altura del bloque. */
+.cm-table-wrap {
+  overflow-x: auto;
+  padding: 6px 0;
+}
+
+.cm-table {
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+
+.cm-table th,
+.cm-table td {
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  text-align: left;
+}
+
+.cm-table th {
+  background: var(--bg-code);
+  font-weight: 650;
+}
+
+.cm-table .cm-inline-code {
+  white-space: nowrap;
+}
+
 /* ========== Barra de formato flotante ========== */
 .format-toolbar {
   position: fixed;
