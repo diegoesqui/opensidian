@@ -343,6 +343,13 @@ export function Sidebar() {
           <span>🔍 Buscar</span>
           <kbd>{mod}⇧F</kbd>
         </button>
+        <button
+          class={view.value === 'tasks' ? 'nav-btn active' : 'nav-btn'}
+          onClick={() => (view.value = 'tasks')}
+        >
+          <span>☑ Tareas</span>
+          <kbd>{mod}⇧T</kbd>
+        </button>
         <button class="nav-btn" onClick={() => (quickOpen.value = true)}>
           <span>📄 Abrir nota</span>
           <kbd>{mod}K</kbd>

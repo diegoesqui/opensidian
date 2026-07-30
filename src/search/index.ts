@@ -4,6 +4,7 @@ import type { Vault, VaultEntry } from '../fs/vault';
 import { normalize, titleOf } from '../util';
 import { renameWikiLinks } from '../wikilink';
 import { indexLinks, notesLinkingTo, removeLinks, resetLinks } from './links';
+import { indexTasks, removeTasks, resetTasks } from './tasks';
 
 export { backlinksFor, linksVersion } from './links';
 
@@ -49,6 +50,7 @@ export function resetIndex() {
   filePaths.value = [];
   indexReady.value = false;
   resetLinks();
+  resetTasks();
 }
 
 export async function buildIndex(v: Vault): Promise<void> {
@@ -66,6 +68,7 @@ export async function buildIndex(v: Vault): Promise<void> {
       contents.set(path, content);
       mini.add(docFor(path, content));
       indexLinks(path, content);
+      indexTasks(path, content);
     } catch {
       // archivo ilegible: se omite del índice
     }
@@ -88,6 +91,7 @@ export function notifySaved(path: string, content: string) {
   }
   mini.add(docFor(path, content));
   indexLinks(path, content);
+  indexTasks(path, content);
 }
 
 export function notifyDeleted(path: string, kind: 'file' | 'dir') {
@@ -101,6 +105,7 @@ export function notifyDeleted(path: string, kind: 'file' | 'dir') {
       // no estaba en el índice
     }
     removeLinks(p);
+    removeTasks(p);
   }
   filePaths.value = filePaths.value.filter((p) => !gone(p));
 }
@@ -118,6 +123,7 @@ export function notifyRenamed(oldPath: string, newPath: string, kind: 'file' | '
     contents.set(to, content);
     mini.add(docFor(to, content));
     indexLinks(to, content);
+    indexTasks(to, content);
   }
   filePaths.value = [...contents.keys()].sort();
 }

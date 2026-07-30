@@ -21,7 +21,7 @@ import {
 import { seedDemoVault } from './fs/demo';
 import { extOf, normalize, parentOf, titleOf } from './util';
 
-export type ViewKind = 'note' | 'journal' | 'search';
+export type ViewKind = 'note' | 'journal' | 'search' | 'tasks';
 
 export const vault = signal<Vault | null>(null);
 export const tree = signal<VaultEntry | null>(null);
