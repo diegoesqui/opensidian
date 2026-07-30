@@ -4,6 +4,7 @@ import { openOrCreateWikiLink, vault } from '../state';
 import { createEditor } from '../editor/editor';
 import { linkClickHandling } from '../editor/live-preview';
 import { wikiLinkAutocomplete } from '../editor/wikilink-autocomplete';
+import { headingsTracker, type Heading } from '../editor/headings';
 import { isDeleted, registerFlusher } from '../editor/autosave';
 import { filePaths, notifySaved } from '../search';
 import { titleOf } from '../util';
@@ -12,6 +13,12 @@ interface Props {
   path: string;
   autofocus?: boolean;
   placeholder?: string;
+  /** Expone el EditorView al padre (p. ej. para que el índice flotante pueda saltar a un encabezado). */
+  onEditor?: (view: EditorView | null) => void;
+  /** Notifica los encabezados de la nota cada vez que cambian, para alimentar el índice. */
+  onHeadings?: (headings: Heading[]) => void;
+  /** Índice del encabezado en el que está el cursor (-1 si va antes del primero). */
+  onActiveHeading?: (index: number) => void;
 }
 
 /**
@@ -19,7 +26,14 @@ interface Props {
  * guarda con debounce mientras se escribe y recarga si el archivo
  * cambia en disco al recuperar el foco.
  */
-export function MarkdownEditor({ path, autofocus, placeholder }: Props) {
+export function MarkdownEditor({
+  path,
+  autofocus,
+  placeholder,
+  onEditor,
+  onHeadings,
+  onActiveHeading
+}: Props) {
   const host = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -73,9 +87,11 @@ export function MarkdownEditor({ path, autofocus, placeholder }: Props) {
         placeholder,
         extraExtensions: [
           linkClickHandling((title) => void openOrCreateWikiLink(title)),
-          wikiLinkAutocomplete(() => filePaths.value.map(titleOf))
+          wikiLinkAutocomplete(() => filePaths.value.map(titleOf)),
+          ...(onHeadings ? [headingsTracker(onHeadings, onActiveHeading ?? (() => {}))] : [])
         ]
       });
+      onEditor?.(view);
       if (autofocus) view.focus();
     })();
 
@@ -100,6 +116,7 @@ export function MarkdownEditor({ path, autofocus, placeholder }: Props) {
       void save();
       unregister();
       window.removeEventListener('focus', onWindowFocus);
+      onEditor?.(null);
       view?.destroy();
       view = null;
     };

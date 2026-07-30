@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { titleOf, parentOf } from '../util';
 import { renameNoteTitle, vaultError } from '../state';
 import { MarkdownEditor } from './markdown-editor';
+import { clearOutline, outlineActive, outlineEditor, outlineHeadings } from './outline';
 
 function EditableTitle({ path }: { path: string }) {
   const [editing, setEditing] = useState(false);
@@ -62,6 +63,12 @@ function EditableTitle({ path }: { path: string }) {
 
 export function NoteView({ path }: { path: string }) {
   const parent = parentOf(path);
+
+  // El índice se alimenta por señales porque vive fuera de esta vista (es una
+  // columna hermana de `.main`). Se vacía al cambiar de nota y al cerrarla,
+  // para que no quede visible el índice de la anterior.
+  useEffect(() => clearOutline, [path]);
+
   return (
     <div class="note-view">
       <header class="note-header">
@@ -69,7 +76,14 @@ export function NoteView({ path }: { path: string }) {
         <EditableTitle key={path} path={path} />
         {vaultError.value && <p class="error">{vaultError.value}</p>}
       </header>
-      <MarkdownEditor key={path} path={path} autofocus />
+      <MarkdownEditor
+        key={path}
+        path={path}
+        autofocus
+        onEditor={(v) => (outlineEditor.value = v)}
+        onHeadings={(h) => (outlineHeadings.value = h)}
+        onActiveHeading={(i) => (outlineActive.value = i)}
+      />
     </div>
   );
 }
