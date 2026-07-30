@@ -11,6 +11,10 @@ export interface Vault {
   listTree(): Promise<VaultEntry>;
   readFile(path: string): Promise<string>;
   writeFile(path: string, content: string): Promise<void>;
+  readBinary(path: string): Promise<ArrayBuffer>;
+  writeBinary(path: string, data: Blob | ArrayBuffer): Promise<void>;
+  /** Todas las rutas de archivo, notas y binarios (para exportar); listTree() solo lista notas. */
+  listAllPaths(): Promise<string[]>;
   deleteFile(path: string): Promise<void>;
   deleteDir(path: string): Promise<void>;
   createDir(path: string): Promise<void>;
@@ -20,6 +24,14 @@ export interface Vault {
 }
 
 export const NOTE_EXT = /\.(md|markdown|txt)$/i;
+
+/**
+ * Carpeta del vault donde se guardan las imágenes pegadas o arrastradas.
+ * Vive aquí, en la capa del vault, porque es parte de su disposición en
+ * disco: `listTree()` la oculta del árbol de notas y quien escriba en ella
+ * (editor/images.ts) importa el nombre desde aquí, no al revés.
+ */
+export const ASSETS_DIR = 'assets';
 
 function iterate(dir: FileSystemDirectoryHandle): AsyncIterable<FileSystemHandle> {
   return (dir as unknown as { values(): AsyncIterable<FileSystemHandle> }).values();
@@ -57,6 +69,11 @@ export class HandleVault implements Vault {
       const children: VaultEntry[] = [];
       for await (const handle of iterate(dir)) {
         if (handle.name.startsWith('.')) continue;
+        // La carpeta de imágenes es almacenamiento interno, no notas: en el
+        // árbol se vería siempre vacía (solo se listan archivos con
+        // NOTE_EXT) y solo estorbaría. listAllPaths() sí la incluye, que es
+        // lo que hace que los binarios entren en la exportación a zip.
+        if (!path && handle.kind === 'directory' && handle.name === ASSETS_DIR) continue;
         const childPath = path ? `${path}/${handle.name}` : handle.name;
         if (handle.kind === 'directory') {
           children.push(await walk(handle as FileSystemDirectoryHandle, childPath));
@@ -84,6 +101,39 @@ export class HandleVault implements Vault {
     const writable = await handle.createWritable();
     await writable.write(content);
     await writable.close();
+  }
+
+  async readBinary(path: string): Promise<ArrayBuffer> {
+    const handle = await this.fileFor(path);
+    return (await handle.getFile()).arrayBuffer();
+  }
+
+  async writeBinary(path: string, data: Blob | ArrayBuffer): Promise<void> {
+    const handle = await this.fileFor(path, true);
+    const writable = await handle.createWritable();
+    // createWritable().write() no acepta ArrayBuffer suelto en todos los
+    // motores; se envuelve en Blob para que ambos backends (FSA y OPFS,
+    // que comparten esta misma clase) lo acepten por igual.
+    await writable.write(data instanceof Blob ? data : new Blob([data]));
+    await writable.close();
+  }
+
+  /** Todas las rutas de archivo del vault, sin filtrar por extensión: a
+   * diferencia de listTree() (que solo lista notas, para la barra lateral y
+   * la búsqueda), esta se usa para exportar el vault completo, binarios
+   * incluidos. */
+  async listAllPaths(): Promise<string[]> {
+    const paths: string[] = [];
+    const walk = async (dir: FileSystemDirectoryHandle, path: string): Promise<void> => {
+      for await (const handle of iterate(dir)) {
+        if (handle.name.startsWith('.')) continue;
+        const childPath = path ? `${path}/${handle.name}` : handle.name;
+        if (handle.kind === 'directory') await walk(handle as FileSystemDirectoryHandle, childPath);
+        else paths.push(childPath);
+      }
+    };
+    await walk(this.root, '');
+    return paths;
   }
 
   async exists(path: string): Promise<boolean> {
