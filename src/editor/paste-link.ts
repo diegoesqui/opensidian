@@ -32,6 +32,13 @@ function hostnameLabel(url: string): string {
 export function linkPasteHandling(): Extension {
   return EditorView.domEventHandlers({
     paste(event, view) {
+      // Si el portapapeles trae una imagen, gana imagePasteHandling
+      // (paste-image.ts) aunque también venga texto de una URL (p. ej.
+      // "copiar imagen" desde un navegador copia ambas cosas a la vez): no
+      // hay que insertar un enlace de texto en ese caso.
+      const files = event.clipboardData ? Array.from(event.clipboardData.files) : [];
+      if (files.some((f) => f.type.startsWith('image/'))) return false;
+
       const text = event.clipboardData?.getData('text/plain')?.trim();
       if (!text || !BARE_URL_RE.test(text)) return false;
       const sel = view.state.selection.main;

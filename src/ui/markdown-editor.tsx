@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'preact/hooks';
 import type { EditorView } from '@codemirror/view';
-import { openOrCreateWikiLink, vault } from '../state';
+import { openOrCreateWikiLink, vault, vaultError } from '../state';
 import { createEditor } from '../editor/editor';
 import { linkClickHandling } from '../editor/live-preview';
+import { imagePreview } from '../editor/image-preview';
+import { imagePasteHandling } from '../editor/paste-image';
 import { wikiLinkAutocomplete } from '../editor/wikilink-autocomplete';
 import { headingsTracker, type Heading } from '../editor/headings';
 import { isDeleted, registerFlusher } from '../editor/autosave';
@@ -88,6 +90,8 @@ export function MarkdownEditor({
         extraExtensions: [
           linkClickHandling((title) => void openOrCreateWikiLink(title)),
           wikiLinkAutocomplete(() => filePaths.value.map(titleOf)),
+          imagePreview(v),
+          imagePasteHandling(v, (message) => (vaultError.value = message)),
           ...(onHeadings ? [headingsTracker(onHeadings, onActiveHeading ?? (() => {}))] : [])
         ]
       });

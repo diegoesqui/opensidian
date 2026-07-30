@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { refreshTree, vault } from '../state';
+import { refreshTree, vault, vaultError } from '../state';
 import { MarkdownEditor } from './markdown-editor';
 
 const CHUNK = 10;
@@ -74,6 +74,7 @@ export function JournalView() {
 
   return (
     <div class="journal">
+      {vaultError.value && <p class="error">{vaultError.value}</p>}
       {visible.map((d) => (
         <section key={d} class="day">
           <h2 class={d === today ? 'day-title today' : 'day-title'}>

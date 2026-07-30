@@ -11,6 +11,10 @@ export interface Vault {
   listTree(): Promise<VaultEntry>;
   readFile(path: string): Promise<string>;
   writeFile(path: string, content: string): Promise<void>;
+  readBinary(path: string): Promise<ArrayBuffer>;
+  writeBinary(path: string, data: Blob | ArrayBuffer): Promise<void>;
+  /** Todas las rutas de archivo, notas y binarios (para exportar); listTree() solo lista notas. */
+  listAllPaths(): Promise<string[]>;
   deleteFile(path: string): Promise<void>;
   deleteDir(path: string): Promise<void>;
   createDir(path: string): Promise<void>;
@@ -84,6 +88,39 @@ export class HandleVault implements Vault {
     const writable = await handle.createWritable();
     await writable.write(content);
     await writable.close();
+  }
+
+  async readBinary(path: string): Promise<ArrayBuffer> {
+    const handle = await this.fileFor(path);
+    return (await handle.getFile()).arrayBuffer();
+  }
+
+  async writeBinary(path: string, data: Blob | ArrayBuffer): Promise<void> {
+    const handle = await this.fileFor(path, true);
+    const writable = await handle.createWritable();
+    // createWritable().write() no acepta ArrayBuffer suelto en todos los
+    // motores; se envuelve en Blob para que ambos backends (FSA y OPFS,
+    // que comparten esta misma clase) lo acepten por igual.
+    await writable.write(data instanceof Blob ? data : new Blob([data]));
+    await writable.close();
+  }
+
+  /** Todas las rutas de archivo del vault, sin filtrar por extensión: a
+   * diferencia de listTree() (que solo lista notas, para la barra lateral y
+   * la búsqueda), esta se usa para exportar el vault completo, binarios
+   * incluidos. */
+  async listAllPaths(): Promise<string[]> {
+    const paths: string[] = [];
+    const walk = async (dir: FileSystemDirectoryHandle, path: string): Promise<void> => {
+      for await (const handle of iterate(dir)) {
+        if (handle.name.startsWith('.')) continue;
+        const childPath = path ? `${path}/${handle.name}` : handle.name;
+        if (handle.kind === 'directory') await walk(handle as FileSystemDirectoryHandle, childPath);
+        else paths.push(childPath);
+      }
+    };
+    await walk(this.root, '');
+    return paths;
   }
 
   async exists(path: string): Promise<boolean> {

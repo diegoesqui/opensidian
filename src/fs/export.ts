@@ -1,15 +1,13 @@
 import { strToU8, zipSync } from 'fflate';
-import type { Vault, VaultEntry } from './vault';
+import { NOTE_EXT, type Vault } from './vault';
 
-/** Descarga todas las notas del vault como un .zip (modo navegador). */
+/** Descarga todo el vault como un .zip (modo navegador): notas y binarios (imágenes en assets/). */
 export async function exportZip(v: Vault): Promise<void> {
-  const root = await v.listTree();
+  const paths = await v.listAllPaths();
   const files: Record<string, Uint8Array> = {};
-  const collect = async (e: VaultEntry) => {
-    if (e.kind === 'file') files[e.path] = strToU8(await v.readFile(e.path));
-    for (const child of e.children ?? []) await collect(child);
-  };
-  await collect(root);
+  for (const path of paths) {
+    files[path] = NOTE_EXT.test(path) ? strToU8(await v.readFile(path)) : new Uint8Array(await v.readBinary(path));
+  }
   const zip = zipSync(files);
   const blob = new Blob([zip.slice().buffer], { type: 'application/zip' });
   const a = document.createElement('a');
