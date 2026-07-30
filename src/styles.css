@@ -1071,6 +1071,90 @@ button.icon.danger:hover {
   line-height: 1.45;
 }
 
+/* ========== Tareas pendientes ========== */
+.tasks-panel {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 28px 32px 60px;
+}
+
+.tasks-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.tasks-header h1 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.tasks-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.tasks-group {
+  margin-bottom: 22px;
+}
+
+.tasks-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 0 0 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.tasks-group-title:hover {
+  color: var(--fg);
+}
+
+.tasks-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 4px;
+  border-radius: 8px;
+}
+
+.task-item:hover {
+  background: var(--bg-hover);
+}
+
+.task-item input[type='checkbox'] {
+  margin-top: 3px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.task-item .task-text {
+  flex: 1;
+  cursor: pointer;
+  line-height: 1.45;
+}
+
+.task-item.done .task-text {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
 /* ========== Quick switcher ========== */
 .modal-backdrop {
   position: fixed;

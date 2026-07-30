@@ -4,6 +4,7 @@ import { Sidebar } from './sidebar';
 import { NoteView } from './note-view';
 import { JournalView } from './journal';
 import { SearchPanel } from './search-panel';
+import { TasksPanel } from './tasks-panel';
 import { QuickSwitcher } from './quick-switcher';
 import { Outline } from './outline';
 import { TrashPanel, trashOpen } from './trash';
@@ -28,6 +29,8 @@ export function App() {
           <JournalView />
         ) : view.value === 'search' ? (
           <SearchPanel />
+        ) : view.value === 'tasks' ? (
+          <TasksPanel />
         ) : currentPath.value ? (
           <NoteView path={currentPath.value} />
         ) : (

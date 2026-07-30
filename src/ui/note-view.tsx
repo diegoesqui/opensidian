@@ -4,6 +4,7 @@ import { renameNoteTitle, vaultError } from '../state';
 import { MarkdownEditor } from './markdown-editor';
 import { clearOutline, outlineActive, outlineEditor, outlineHeadings } from './outline';
 import { Backlinks } from './backlinks';
+import { consumePendingJump } from './task-jump';
 
 function EditableTitle({ path }: { path: string }) {
   const [editing, setEditing] = useState(false);
@@ -81,7 +82,12 @@ export function NoteView({ path }: { path: string }) {
         key={path}
         path={path}
         autofocus
-        onEditor={(v) => (outlineEditor.value = v)}
+        onEditor={(v) => {
+          outlineEditor.value = v;
+          // Si se llegó aquí desde la vista de tareas (issue #11), el salto a
+          // la línea concreta se queda pendiente hasta que el editor existe.
+          if (v) consumePendingJump(path, v);
+        }}
         onHeadings={(h) => (outlineHeadings.value = h)}
         onActiveHeading={(i) => (outlineActive.value = i)}
       />

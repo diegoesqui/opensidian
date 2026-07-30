@@ -23,6 +23,9 @@ export function initShortcuts() {
       } else if (key === 'f' && e.shiftKey) {
         if (vault.value) view.value = 'search';
         handled = true;
+      } else if (key === 't' && e.shiftKey) {
+        if (vault.value) view.value = 'tasks';
+        handled = true;
       }
       if (handled) {
         e.preventDefault();
