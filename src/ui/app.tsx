@@ -9,7 +9,7 @@ import { TagsPanel } from './tags-panel';
 import { QuickSwitcher } from './quick-switcher';
 import { Outline } from './outline';
 import { TrashPanel, trashOpen } from './trash';
-import { TemplateSettings, templateSettingsOpen } from './template-settings';
+import { TemplatePicker, templatePickerOpen } from './template-insert';
 
 function EmptyState() {
   return (
@@ -45,7 +45,7 @@ export function App() {
       {view.value === 'note' && currentPath.value && <Outline />}
       {quickOpen.value && <QuickSwitcher />}
       {trashOpen.value && <TrashPanel />}
-      {templateSettingsOpen.value && <TemplateSettings />}
+      {templatePickerOpen.value && <TemplatePicker />}
     </div>
   );
 }

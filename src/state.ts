@@ -19,6 +19,7 @@ import {
   rewriteLinksTo
 } from './search';
 import { seedDemoVault } from './fs/demo';
+import { migrateLegacyTemplate } from './templates';
 import { extOf, normalize, parentOf, titleOf } from './util';
 
 export type ViewKind = 'note' | 'journal' | 'search' | 'tasks' | 'tags';
@@ -49,6 +50,10 @@ async function activateVault(v: Vault): Promise<void> {
   currentPath.value = null;
   view.value = 'journal';
   activeTag.value = null;
+  // Antes de listar el árbol o construir el índice, por si el vault trae la
+  // plantilla del diario en la ruta antigua (issue #22): así entra ya
+  // migrada en el primer listTree()/buildIndex(), no un instante después.
+  await migrateLegacyTemplate(v);
   await refreshTree();
   void refreshTrash();
   void buildIndex(v);

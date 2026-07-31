@@ -1,9 +1,42 @@
+import type { Extension } from '@codemirror/state';
+import { EditorView } from '@codemirror/view';
+
 type FlushFn = () => Promise<void> | void;
 type ReloadFn = () => Promise<void> | void;
 
 const flushers = new Set<FlushFn>();
 const deletedPaths = new Set<string>();
 const reloaders = new Map<string, ReloadFn>();
+
+/**
+ * Editor con el foco ahora mismo (issue #22): acciones que necesitan "el
+ * editor activo" sin que se les pase por props -como insertar una plantilla
+ * en el cursor desde el selector global, ver src/ui/template-insert.tsx- lo
+ * leen de aquí. No vale una única referencia guardada en un componente
+ * porque el editor activo puede estar en NoteView o en cualquiera de los
+ * editores que monta a la vez JournalView (uno por día).
+ */
+let activeEditor: EditorView | null = null;
+
+export function setActiveEditor(view: EditorView | null) {
+  activeEditor = view;
+}
+
+export function getActiveEditor(): EditorView | null {
+  return activeEditor;
+}
+
+/** Extensión que mantiene activeEditor al día según el foco del propio
+ * CodeMirror (update.focusChanged/view.hasFocus, el mismo mecanismo que ya
+ * usan live-preview.ts, image-preview.ts y format-toolbar.ts). Se añade a
+ * cada MarkdownEditor montado. */
+export function activeEditorTracking(): Extension {
+  return EditorView.updateListener.of((update) => {
+    if (!update.focusChanged) return;
+    if (update.view.hasFocus) setActiveEditor(update.view);
+    else if (getActiveEditor() === update.view) setActiveEditor(null);
+  });
+}
 
 export function registerFlusher(fn: FlushFn): () => void {
   flushers.add(fn);

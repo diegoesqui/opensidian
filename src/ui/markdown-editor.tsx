@@ -9,7 +9,14 @@ import { imagePasteHandling } from '../editor/paste-image';
 import { acceptCompletionKeymap, wikiLinkCompletionSource } from '../editor/wikilink-autocomplete';
 import { tagCompletionSource } from '../editor/tag-autocomplete';
 import { headingsTracker, type Heading } from '../editor/headings';
-import { isDeleted, registerFlusher, registerReloader } from '../editor/autosave';
+import {
+  activeEditorTracking,
+  getActiveEditor,
+  isDeleted,
+  registerFlusher,
+  registerReloader,
+  setActiveEditor
+} from '../editor/autosave';
 import { filePaths, notifySaved } from '../search';
 import { allTagCounts } from '../search/tags';
 import { titleOf } from '../util';
@@ -111,6 +118,7 @@ export function MarkdownEditor({
           acceptCompletionKeymap,
           imagePreview(v),
           imagePasteHandling(v, (message) => (vaultError.value = message)),
+          activeEditorTracking(),
           ...(onHeadings ? [headingsTracker(onHeadings, onActiveHeading ?? (() => {}))] : [])
         ]
       });
@@ -146,6 +154,11 @@ export function MarkdownEditor({
       unregisterReloader();
       window.removeEventListener('focus', reloadIfChanged);
       onEditor?.(null);
+      // Destruir la vista no dispara un focusChanged (no es una transición
+      // de foco, es que el editor deja de existir): sin esto, el selector de
+      // plantillas podría quedarse con una referencia a un EditorView ya
+      // destruido si se cierra la nota justo después de enfocarla.
+      if (view && getActiveEditor() === view) setActiveEditor(null);
       view?.destroy();
       view = null;
     };
