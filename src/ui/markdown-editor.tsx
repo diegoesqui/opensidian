@@ -1,14 +1,17 @@
 import { useEffect, useRef } from 'preact/hooks';
 import type { EditorView } from '@codemirror/view';
-import { openOrCreateWikiLink, vault, vaultError } from '../state';
+import { autocompletion } from '@codemirror/autocomplete';
+import { openOrCreateWikiLink, openTag, vault, vaultError } from '../state';
 import { createEditor } from '../editor/editor';
 import { linkClickHandling } from '../editor/live-preview';
 import { imagePreview } from '../editor/image-preview';
 import { imagePasteHandling } from '../editor/paste-image';
-import { wikiLinkAutocomplete } from '../editor/wikilink-autocomplete';
+import { acceptCompletionKeymap, wikiLinkCompletionSource } from '../editor/wikilink-autocomplete';
+import { tagCompletionSource } from '../editor/tag-autocomplete';
 import { headingsTracker, type Heading } from '../editor/headings';
 import { isDeleted, registerFlusher, registerReloader } from '../editor/autosave';
 import { filePaths, notifySaved } from '../search';
+import { allTagCounts } from '../search/tags';
 import { titleOf } from '../util';
 
 interface Props {
@@ -88,8 +91,24 @@ export function MarkdownEditor({
         onDocChanged: onChange,
         placeholder,
         extraExtensions: [
-          linkClickHandling((title) => void openOrCreateWikiLink(title)),
-          wikiLinkAutocomplete(() => filePaths.value.map(titleOf)),
+          linkClickHandling(
+            (title) => void openOrCreateWikiLink(title),
+            (name) => openTag(name)
+          ),
+          // Una sola autocompletion(): CodeMirror no admite dos extensiones
+          // independientes con `override` propio (ver el comentario de
+          // wikiLinkCompletionSource), así que las dos fuentes se combinan
+          // aquí en vez de montar wikiLinkAutocomplete()/tagAutocomplete()
+          // por separado.
+          autocompletion({
+            override: [
+              wikiLinkCompletionSource(() => filePaths.value.map(titleOf)),
+              tagCompletionSource(() => allTagCounts().map((t) => t.name))
+            ],
+            activateOnTyping: true,
+            icons: false
+          }),
+          acceptCompletionKeymap,
           imagePreview(v),
           imagePasteHandling(v, (message) => (vaultError.value = message)),
           ...(onHeadings ? [headingsTracker(onHeadings, onActiveHeading ?? (() => {}))] : [])

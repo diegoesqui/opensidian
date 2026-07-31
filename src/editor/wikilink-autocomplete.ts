@@ -1,20 +1,41 @@
 import {
   acceptCompletion,
-  autocompletion,
   completionKeymap,
   type CompletionContext,
-  type CompletionResult
+  type CompletionResult,
+  type CompletionSource
 } from '@codemirror/autocomplete';
 import { Prec, type Extension } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 
 /**
- * Autocompleta [[wiki-links]]: al escribir "[[" propone títulos de notas
- * existentes, filtrados según se sigue escribiendo. Tab/Enter completa con
- * "]]" y deja el cursor justo después.
+ * Tab/Enter acepta la opción seleccionada del menú de autocompletar
+ * (Prec.highest: si no, Tab por defecto indenta -indentWithTab-). Se expone
+ * suelta porque markdown-editor.tsx la comparte entre esta fuente y la de
+ * tag-autocomplete.ts: ver el porqué en el comentario de
+ * wikiLinkCompletionSource más abajo.
  */
-export function wikiLinkAutocomplete(getTitles: () => string[]): Extension {
-  const source = (context: CompletionContext): CompletionResult | null => {
+export const acceptCompletionKeymap: Extension = Prec.highest(
+  keymap.of([{ key: 'Tab', run: acceptCompletion }, ...completionKeymap])
+);
+
+/**
+ * Fuente de autocompletado para [[wiki-links]]: al escribir "[[" propone
+ * títulos de notas existentes, filtrados según se sigue escribiendo.
+ * Tab/Enter completa con "]]" y deja el cursor justo después.
+ *
+ * Se expone como fuente suelta (CompletionSource) en vez de devolver ya la
+ * Extension con su propio autocompletion() montado, porque el editor
+ * necesita además tagCompletionSource (tag-autocomplete.ts) en la MISMA
+ * instancia de CodeMirror, y @codemirror/autocomplete no admite dos
+ * extensiones autocompletion() independientes activas a la vez: su config
+ * `override` no tiene combinador y CodeMirror lanza "Config merge conflict
+ * for field override" en cuanto hay dos valores distintos. Quien monta el
+ * editor (markdown-editor.tsx) combina esta fuente y la de etiquetas en una
+ * única llamada a autocompletion().
+ */
+export function wikiLinkCompletionSource(getTitles: () => string[]): CompletionSource {
+  return (context: CompletionContext): CompletionResult | null => {
     const match = context.matchBefore(/\[\[[^[\]\n]*/);
     if (!match) return null;
     const query = match.text.slice(2).toLowerCase();
@@ -51,11 +72,4 @@ export function wikiLinkAutocomplete(getTitles: () => string[]): Extension {
     if (!options.length) return null;
     return { from, options, filter: false };
   };
-
-  return [
-    autocompletion({ override: [source], activateOnTyping: true, icons: false }),
-    // Prec.highest: Tab por defecto indenta (indentWithTab); cuando el menú
-    // de autocompletar está abierto, debe aceptar la opción seleccionada.
-    Prec.highest(keymap.of([{ key: 'Tab', run: acceptCompletion }, ...completionKeymap]))
-  ];
 }

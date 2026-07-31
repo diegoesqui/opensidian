@@ -10,6 +10,7 @@ import {
 } from '@codemirror/view';
 import type { SyntaxNode, SyntaxNodeRef } from '@lezer/common';
 import { WIKILINK_RE } from '../wikilink';
+import { TAG_RE, looksLikeHexColor } from '../tags';
 
 /**
  * Live preview estilo Obsidian: los marcadores markdown (#, **, ``, - […])
@@ -293,6 +294,27 @@ function build(view: EditorView): DecorationSet {
         ranges.push(Decoration.mark({ class: 'cm-wikilink' }).range(start, end));
       }
     }
+
+    // Etiquetas #etiqueta (issue #12): tampoco son sintaxis markdown
+    // estándar -salvo que el "#" no lleve espacio detrás es justo lo que las
+    // distingue de un encabezado ATX, ver el comentario de cabecera de
+    // tags.ts-, así que se detectan igual que los wiki-links: regex por
+    // línea, evitando código en línea/bloques. A diferencia de los
+    // wiki-links no hay nada que ocultar (el "#" se queda visible en el
+    // resultado renderizado), así que el mark no depende de si la línea
+    // tiene el cursor.
+    for (let ln = doc.lineAt(from).number; ln <= doc.lineAt(to).number; ln++) {
+      const line = doc.line(ln);
+      TAG_RE.lastIndex = 0;
+      let mt: RegExpExecArray | null;
+      while ((mt = TAG_RE.exec(line.text))) {
+        const start = line.from + mt.index;
+        const end = start + mt[0].length;
+        if (looksLikeHexColor(mt[1])) continue;
+        if (isInCode(state, start)) continue;
+        ranges.push(Decoration.mark({ class: 'cm-tag' }).range(start, end));
+      }
+    }
   }
   return Decoration.set(ranges, true);
 }
@@ -340,6 +362,19 @@ function wikiLinkAt(state: EditorState, pos: number): string | null {
   return null;
 }
 
+function tagAt(state: EditorState, pos: number): string | null {
+  const line = state.doc.lineAt(pos);
+  TAG_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = TAG_RE.exec(line.text))) {
+    const start = line.from + m.index;
+    const end = start + m[0].length;
+    if (looksLikeHexColor(m[1])) continue;
+    if (pos >= start && pos <= end) return m[1];
+  }
+  return null;
+}
+
 /** Abre una URL solo si el esquema es uno seguro conocido (evita javascript:/data:). */
 function openSafeUrl(raw: string) {
   const url = raw.trim();
@@ -352,9 +387,16 @@ function openSafeUrl(raw: string) {
 
 /**
  * Cmd/Ctrl+clic sobre un enlace `[texto](url)` lo abre en una pestaña nueva;
- * sobre un enlace `[[Nota]]` navega a esa nota (o la crea si no existe).
+ * sobre un enlace `[[Nota]]` navega a esa nota (o la crea si no existe);
+ * sobre una `#etiqueta` filtra por ella (issue #12). El modificador es el
+ * mismo para las tres cosas -y no un clic simple- por lo mismo que ya vale
+ * para los wiki-links: un clic normal debe poder colocar el cursor sobre el
+ * texto de la etiqueta para editarlo, no navegar fuera del editor.
  */
-export function linkClickHandling(onWikiLink: (title: string) => void): Extension {
+export function linkClickHandling(
+  onWikiLink: (title: string) => void,
+  onTag: (name: string) => void
+): Extension {
   return EditorView.domEventHandlers({
     mousedown(event, view) {
       if (!(event.metaKey || event.ctrlKey) || event.button !== 0) return false;
@@ -373,6 +415,12 @@ export function linkClickHandling(onWikiLink: (title: string) => void): Extensio
       if (wiki) {
         event.preventDefault();
         onWikiLink(wiki);
+        return true;
+      }
+      const tag = tagAt(view.state, pos);
+      if (tag) {
+        event.preventDefault();
+        onTag(tag);
         return true;
       }
       return false;
