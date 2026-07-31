@@ -111,6 +111,14 @@ kbd {
   padding: 1px 5px;
 }
 
+/* Iconos de trazo (src/ui/icons.tsx). Heredan el color del texto de al lado,
+   así que un botón activo o en hover tiñe icono y etiqueta a la vez; en la
+   barra lateral se atenúan un poco para que el que mande sea el texto. */
+.icon-svg {
+  flex-shrink: 0;
+  vertical-align: -0.18em;
+}
+
 .muted {
   color: var(--muted);
 }
@@ -132,6 +140,14 @@ kbd {
 .start-card h1 {
   font-size: 28px;
   margin: 0 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.start-card h1 .icon-svg {
+  color: var(--accent);
 }
 
 .tagline {
@@ -295,6 +311,25 @@ button.icon.danger:hover {
   font-weight: 600;
 }
 
+.nav-label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+/* El icono, medio tono por debajo del texto: acompaña sin gritar. En el
+   elemento activo sube a la opacidad plena para que la fila entera se lea
+   como una sola pieza en el color de acento. */
+.nav-label .icon-svg {
+  color: var(--muted);
+}
+
+.nav-btn:hover .nav-label .icon-svg,
+.nav-btn.active .nav-label .icon-svg {
+  color: inherit;
+}
+
 .section-row {
   display: flex;
   align-items: center;
@@ -425,6 +460,9 @@ button.icon.danger:hover {
 }
 
 .sidebar-footer .btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   text-align: left;
 }
 
@@ -1175,6 +1213,10 @@ button.icon.danger:hover {
 .history-title {
   flex: 1;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 /* Deja clarísimo que esto no es una copia de seguridad (issue #15): vive
@@ -1313,6 +1355,14 @@ button.icon.danger:hover {
 
 .qs-title {
   font-weight: 550;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.qs-title .icon-svg {
+  color: var(--muted);
 }
 
 .qs-path {
@@ -1339,6 +1389,9 @@ button.icon.danger:hover {
 .trash-title {
   flex: 1;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .trash-list li {
@@ -1426,6 +1479,9 @@ button.icon.danger:hover {
 
 .tags-back {
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 /* Índice de etiquetas: mismo padding/hover que .task-item, sin checkbox. */
@@ -1467,7 +1523,52 @@ button.icon.danger:hover {
 
 /* ========== Impresión ========== */
 
-/* Issue #14: botón de imprimir de note-view.tsx + HTML de impresión que
+/* Menú de acciones de la nota (ui/note-menu.tsx): un solo botón discreto en
+   la cabecera en vez de un icono por acción. */
+.note-menu {
+  position: relative;
+  margin-left: auto;
+}
+
+.note-menu-btn {
+  color: var(--faint);
+}
+
+.menu-popup {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  min-width: 210px;
+  padding: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 6px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.menu-item:hover {
+  background: var(--bg-hover);
+}
+
+.menu-item .icon-svg {
+  color: var(--muted);
+}
+
+/* Issue #14: acción de imprimir (ahora dentro del menú de arriba) + HTML de impresión que
    monta ui/print.ts (construido a mano en editor/print-render.ts a partir
    del árbol de sintaxis, ver ese archivo). CodeMirror solo mantiene en el
    DOM las líneas visibles del editor (virtualización del viewport), así que
@@ -1478,10 +1579,7 @@ button.icon.danger:hover {
 .note-header-top {
   display: flex;
   align-items: center;
-}
-
-.note-print-btn {
-  margin-left: auto;
+  min-height: 24px;
 }
 
 .print-note-container {

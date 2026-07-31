@@ -6,6 +6,7 @@ import { clearOutline, outlineActive, outlineEditor, outlineHeadings } from './o
 import { Backlinks } from './backlinks';
 import { consumePendingJump } from './task-jump';
 import { printNote } from './print';
+import { NoteMenu } from './note-menu';
 
 function EditableTitle({ path }: { path: string }) {
   const [editing, setEditing] = useState(false);
@@ -88,9 +89,7 @@ export function NoteView({ path }: { path: string }) {
       <header class="note-header">
         <div class="note-header-top">
           {parent && <span class="note-crumb">{parent.replace(/\//g, ' / ')} /</span>}
-          <button class="icon note-print-btn" title="Imprimir nota" onClick={handlePrint}>
-            🖨️
-          </button>
+          <NoteMenu path={path} onPrint={handlePrint} />
         </div>
         <EditableTitle key={path} path={path} />
         {vaultError.value && <p class="error">{vaultError.value}</p>}

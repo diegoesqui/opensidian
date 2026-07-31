@@ -6,6 +6,7 @@ import {
   vaultError
 } from '../state';
 import { supportsFolders } from '../fs/vault';
+import { IconLogo } from './icons';
 
 export function StartScreen() {
   const folders = supportsFolders();
@@ -13,7 +14,10 @@ export function StartScreen() {
   return (
     <div class="start">
       <div class="start-card">
-        <h1>📝 Opensidian</h1>
+        <h1>
+          <IconLogo size={26} />
+          Opensidian
+        </h1>
         <p class="tagline">
           Notas en markdown guardadas como archivos en tu equipo.
           <br />

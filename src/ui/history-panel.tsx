@@ -4,6 +4,7 @@ import { flushAll } from '../editor/autosave';
 import { getVersions, restoreVersion, type HistoryVersion } from '../history';
 import { vault, vaultError } from '../state';
 import { titleOf } from '../util';
+import { IconClock, IconX } from './icons';
 
 /**
  * Ruta de la nota cuyo historial se muestra, o null si el panel está
@@ -124,9 +125,12 @@ export function HistoryPanel() {
     <div class="modal-backdrop" onClick={close}>
       <div class="modal history-modal" onClick={(e) => e.stopPropagation()}>
         <div class="history-header">
-          <span class="history-title">🕐 Historial · {titleOf(path)}</span>
+          <span class="history-title">
+            <IconClock size={15} />
+            Historial · {titleOf(path)}
+          </span>
           <button class="icon" title="Cerrar" onClick={close}>
-            ✕
+            <IconX size={15} />
           </button>
         </div>
         <p class="history-disclaimer">

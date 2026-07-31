@@ -2,6 +2,7 @@ import { signal } from '@preact/signals';
 import { useState } from 'preact/hooks';
 import { emptyTrash, restoreEntry, trashEntries, vaultError } from '../state';
 import type { VaultEntry } from '../fs/vault';
+import { IconFolder, IconTrash, IconX } from './icons';
 
 /**
  * Visibilidad del panel de la papelera (issue #10). Vive en este archivo
@@ -40,9 +41,12 @@ export function TrashPanel() {
     <div class="modal-backdrop" onClick={close}>
       <div class="modal trash-modal" onClick={(e) => e.stopPropagation()}>
         <div class="trash-header">
-          <span class="trash-title">🗑️ Papelera</span>
+          <span class="trash-title">
+            <IconTrash size={15} />
+            Papelera
+          </span>
           <button class="icon" title="Cerrar" onClick={close}>
-            ✕
+            <IconX size={15} />
           </button>
         </div>
         {vaultError.value && <p class="error">{vaultError.value}</p>}
@@ -50,7 +54,8 @@ export function TrashPanel() {
           {entries.map((entry) => (
             <li key={entry.path}>
               <span class="qs-title">
-                {entry.kind === 'dir' ? '📁' : '·'} {entry.name}
+                {entry.kind === 'dir' ? <IconFolder size={14} /> : <span class="file-icon">·</span>}
+                {entry.name}
               </span>
               <button
                 class="btn subtle small"

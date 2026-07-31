@@ -3,6 +3,7 @@ import { allTagCounts, notesUsingTag, tagsVersion, type TagHit } from '../search
 import { activeTag, openTag } from '../state';
 import { titleOf } from '../util';
 import { openNoteAt } from './task-jump';
+import { IconArrowLeft } from './icons';
 
 interface Group {
   path: string;
@@ -63,7 +64,8 @@ function TagResults({ tag }: { tag: string }) {
           title="Volver al índice de etiquetas"
           onClick={() => (activeTag.value = null)}
         >
-          ← Etiquetas
+          <IconArrowLeft size={14} />
+          Etiquetas
         </button>
         <h1>#{tag}</h1>
       </div>

@@ -1,4 +1,5 @@
 import { signal } from '@preact/signals';
+import { IconMoon, IconSun, IconThemeAuto } from './icons';
 
 export type ThemePref = 'auto' | 'light' | 'dark';
 
@@ -28,5 +29,7 @@ export function cycleTheme() {
 export const themeLabel = () =>
   themePref.value === 'auto' ? 'Tema: automático' : themePref.value === 'light' ? 'Tema: claro' : 'Tema: oscuro';
 
-export const themeIcon = () =>
-  themePref.value === 'auto' ? '◐' : themePref.value === 'light' ? '☀' : '☾';
+export function ThemeIcon() {
+  if (themePref.value === 'auto') return <IconThemeAuto size={15} />;
+  return themePref.value === 'light' ? <IconSun size={15} /> : <IconMoon size={15} />;
+}

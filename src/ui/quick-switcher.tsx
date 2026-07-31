@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { createNote, openNote, quickOpen } from '../state';
 import { quickMatch } from '../search';
 import { normalize, titleOf } from '../util';
+import { IconPlus } from './icons';
 
 export function QuickSwitcher() {
   const [q, setQ] = useState('');
@@ -84,7 +85,10 @@ export function QuickSwitcher() {
                 choose(matches.length);
               }}
             >
-              <span class="qs-title">✚ Crear «{q.trim()}»</span>
+              <span class="qs-title">
+                <IconPlus size={14} />
+                Crear «{q.trim()}»
+              </span>
             </li>
           )}
           {total === 0 && <li class="qs-none">Sin coincidencias</li>}
