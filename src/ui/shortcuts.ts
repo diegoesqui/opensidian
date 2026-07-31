@@ -1,5 +1,6 @@
 import { quickOpen, vault, view } from '../state';
 import { flushAll } from '../editor/autosave';
+import { openTemplatePicker } from './template-insert';
 
 export function initShortcuts() {
   // Fase de captura: los atajos globales deben ganar a los del editor
@@ -25,6 +26,13 @@ export function initShortcuts() {
         handled = true;
       } else if (key === 't' && e.shiftKey) {
         if (vault.value) view.value = 'tasks';
+        handled = true;
+      } else if (key === 'p' && e.shiftKey) {
+        // Mod+Shift+P: "P" de Plantilla, y coincide con el atajo de paleta
+        // de comandos de VSCode/Slack/GitHub, que es justo lo que es este
+        // selector (issue #22). No choca con ninguno de los atajos ya
+        // usados (Mod+K/S/J, Mod+Shift+F/T).
+        if (vault.value) openTemplatePicker();
         handled = true;
       }
       if (handled) {

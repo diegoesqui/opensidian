@@ -19,6 +19,7 @@ import {
   rewriteLinksTo
 } from './search';
 import { seedDemoVault } from './fs/demo';
+import { migrateLegacyTemplate } from './templates';
 import { extOf, normalize, parentOf, titleOf } from './util';
 
 export type ViewKind = 'note' | 'journal' | 'search' | 'tasks' | 'tags';
@@ -49,6 +50,19 @@ async function activateVault(v: Vault): Promise<void> {
   currentPath.value = null;
   view.value = 'journal';
   activeTag.value = null;
+  // Antes de listar el árbol o construir el índice, por si el vault trae la
+  // plantilla del diario en la ruta antigua (issue #22): así entra ya
+  // migrada en el primer listTree()/buildIndex(), no un instante después.
+  // Nunca puede impedir que el vault se abra: es el traslado opcional de un
+  // archivo heredado, y si falla (permisos, un directorio a medias) lo peor
+  // que pasa es que la plantilla del diario no se aplique hasta que el
+  // usuario la mueva a mano. Dejar que propague convertiría eso en «no se
+  // pudo abrir la carpeta» y el usuario se quedaría sin sus notas.
+  try {
+    await migrateLegacyTemplate(v);
+  } catch (e) {
+    console.error('No se pudo migrar la plantilla del diario a templates/', e);
+  }
   await refreshTree();
   void refreshTrash();
   void buildIndex(v);

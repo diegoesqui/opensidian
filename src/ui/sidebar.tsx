@@ -14,6 +14,7 @@ import {
   trashEntries,
   tree,
   vault,
+  vaultError,
   view
 } from '../state';
 import type { VaultEntry } from '../fs/vault';
@@ -22,7 +23,7 @@ import { parentOf } from '../util';
 import { cycleTheme, themeIcon, themeLabel } from './theme';
 import { sidebarCollapsed, toggleSidebar } from './layout';
 import { trashOpen } from './trash';
-import { templateSettingsOpen } from './template-settings';
+import { openTemplatePicker } from './template-insert';
 
 /** Icono de panel lateral (distinto del de cambiar de carpeta, para no confundirlos). */
 function SidebarToggleIcon() {
@@ -332,6 +333,12 @@ export function Sidebar() {
           {themeIcon()}
         </button>
       </div>
+      {/* Aquí y no en una vista concreta (NoteView, JournalView...): la barra
+          lateral es lo único que se ve siempre, y errores como "no hay
+          editor enfocado" al insertar una plantilla (issue #22) pueden
+          dispararse desde cualquier vista, incluida Buscar/Tareas/Etiquetas,
+          que hasta ahora no mostraban vaultError en ningún sitio. */}
+      {vaultError.value && <p class="error sidebar-error">{vaultError.value}</p>}
       <nav class="nav">
         <button
           class={view.value === 'journal' ? 'nav-btn active' : 'nav-btn'}
@@ -370,6 +377,10 @@ export function Sidebar() {
           <span>📄 Abrir nota</span>
           <kbd>{mod}K</kbd>
         </button>
+        <button class="nav-btn" onClick={() => openTemplatePicker()}>
+          <span>🗒️ Insertar plantilla</span>
+          <kbd>{mod}⇧P</kbd>
+        </button>
       </nav>
       <div class="section-row">
         <span class="section-title">Notas</span>
@@ -400,9 +411,6 @@ export function Sidebar() {
       <div class="sidebar-footer">
         <button class="btn subtle small" onClick={() => (trashOpen.value = true)}>
           🗑️ Papelera{trashEntries.value.length ? ` (${trashEntries.value.length})` : ''}
-        </button>
-        <button class="btn subtle small" onClick={() => (templateSettingsOpen.value = true)}>
-          🗒️ Plantilla del diario
         </button>
         <button class="btn subtle small" onClick={() => void switchVault()}>
           📂 Cambiar carpeta de notas
