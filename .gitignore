@@ -1,3 +1,10 @@
-node_modules/
+# Sin barra final a propósito: "node_modules/" solo casa con directorios, y
+# al trabajar con git worktrees es habitual enlazar node_modules del repo
+# principal en vez de reinstalar. Ese symlink no es un directorio para git,
+# así que el patrón con barra no lo ignoraba y acababa versionado -y el
+# siguiente checkout lo escribía encima del node_modules real, dejando un
+# enlace que apunta a sí mismo y el repo sin dependencias-.
+node_modules
 dist/
+.claude/worktrees/
 .DS_Store
