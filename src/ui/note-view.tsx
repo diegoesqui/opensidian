@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { titleOf, parentOf } from '../util';
-import { renameNoteTitle, vaultError } from '../state';
+import { renameNoteTitle, vault, vaultError } from '../state';
 import { MarkdownEditor } from './markdown-editor';
 import { clearOutline, outlineActive, outlineEditor, outlineHeadings } from './outline';
 import { Backlinks } from './backlinks';
 import { consumePendingJump } from './task-jump';
+import { printNote } from './print';
 
 function EditableTitle({ path }: { path: string }) {
   const [editing, setEditing] = useState(false);
@@ -71,10 +72,26 @@ export function NoteView({ path }: { path: string }) {
   // para que no quede visible el índice de la anterior.
   useEffect(() => clearOutline, [path]);
 
+  // Issue #14: se imprime el estado EN MEMORIA del editor (outlineEditor),
+  // no lo último guardado en disco -así no hace falta esperar al autoguardado
+  // con debounce (autosave.ts) ni arriesgar una carrera con él-. El propio
+  // editor no sirve para imprimir tal cual: virtualiza el viewport y solo
+  // mantiene en el DOM las líneas visibles (ver editor/print-render.ts).
+  const handlePrint = () => {
+    const editorView = outlineEditor.value;
+    if (!editorView) return;
+    printNote(titleOf(path), editorView.state, vault.value);
+  };
+
   return (
     <div class="note-view">
       <header class="note-header">
-        {parent && <span class="note-crumb">{parent.replace(/\//g, ' / ')} /</span>}
+        <div class="note-header-top">
+          {parent && <span class="note-crumb">{parent.replace(/\//g, ' / ')} /</span>}
+          <button class="icon note-print-btn" title="Imprimir nota" onClick={handlePrint}>
+            🖨️
+          </button>
+        </div>
         <EditableTitle key={path} path={path} />
         {vaultError.value && <p class="error">{vaultError.value}</p>}
       </header>

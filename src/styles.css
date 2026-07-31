@@ -1464,3 +1464,217 @@ button.icon.danger:hover {
   border-radius: 999px;
   padding: 1px 8px;
 }
+
+/* ========== Impresión ========== */
+
+/* Issue #14: botón de imprimir de note-view.tsx + HTML de impresión que
+   monta ui/print.ts (construido a mano en editor/print-render.ts a partir
+   del árbol de sintaxis, ver ese archivo). CodeMirror solo mantiene en el
+   DOM las líneas visibles del editor (virtualización del viewport), así que
+   una nota larga se imprimiría cortada si se intentara imprimir el editor
+   tal cual: por eso el contenido a imprimir vive en este contenedor aparte,
+   como hijo directo de <body>, oculto en pantalla y visible solo aquí. */
+
+.note-header-top {
+  display: flex;
+  align-items: center;
+}
+
+.note-print-btn {
+  margin-left: auto;
+}
+
+.print-note-container {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 1.6cm;
+  }
+
+  /* Oculta TODO lo demás que cuelgue de <body> -barra lateral, índice,
+     barra de formato flotante (que format-toolbar.ts monta directamente en
+     document.body, no dentro de #app) y el propio editor- con una sola
+     regla, en vez de listar cada selector a mano: así cualquier panel nuevo
+     que se añada en el futuro queda cubierto sin tocar esta hoja. */
+  body > *:not(.print-note-container) {
+    display: none !important;
+  }
+
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .print-note-container {
+    display: block !important;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-ui);
+    font-size: 12.5pt;
+    line-height: 1.5;
+
+    /* Tema claro forzado, sea cual sea el tema en pantalla (issue #14).
+       Estas variables ganan sobre :root[data-theme='dark'] y sobre
+       @media (prefers-color-scheme: dark) { :root[data-theme='auto'] {...} }
+       (ver los tres scopes de tema al principio de este archivo) sin
+       depender del orden ni de la especificidad de esas reglas: un valor
+       declarado directamente en este elemento siempre gana sobre uno
+       heredado desde el <html>, sea cual sea el atributo data-theme. */
+    --bg: #ffffff;
+    --fg: #1f2328;
+    --muted: #82878d;
+    --faint: #b6babe;
+    --accent: #6d5ae6;
+    --border: #e6e6e3;
+    --bg-code: rgba(0, 0, 0, 0.045);
+    color: var(--fg);
+    background: var(--bg);
+    /* Sin esto Chrome descarta los fondos (cabecera de tabla, bloques de
+       código) salvo que el usuario marque "Gráficos de fondo" a mano en el
+       diálogo de impresión. */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-note-title {
+    font-size: 22pt;
+    margin: 0 0 6pt;
+  }
+
+  .print-note-body h1,
+  .print-note-body h2,
+  .print-note-body h3,
+  .print-note-body h4,
+  .print-note-body h5,
+  .print-note-body h6 {
+    margin: 16pt 0 6pt;
+    break-after: avoid;
+  }
+
+  .print-note-body h1 {
+    font-size: 19pt;
+  }
+
+  .print-note-body h2 {
+    font-size: 16pt;
+  }
+
+  .print-note-body h3 {
+    font-size: 14pt;
+  }
+
+  .print-note-body h4,
+  .print-note-body h5,
+  .print-note-body h6 {
+    font-size: 12.5pt;
+  }
+
+  .print-note-body p {
+    margin: 0 0 8pt;
+    orphans: 3;
+    widows: 3;
+  }
+
+  .print-note-body ul,
+  .print-note-body ol {
+    margin: 0 0 8pt;
+    padding-left: 22pt;
+  }
+
+  .print-note-body li {
+    margin: 2pt 0;
+  }
+
+  /* Listas "tight" (sin línea en blanco entre items, el caso normal de una
+     lista de tareas): el <p> del párrafo del item no debe sumar su propio
+     margen encima del `margin` del <li>, o la lista se ve suelta. */
+  .print-note-body li > p {
+    margin: 0;
+  }
+
+  .print-note-body blockquote {
+    margin: 0 0 8pt;
+    padding: 2pt 12pt;
+    border-left: 3px solid var(--border);
+    color: var(--muted);
+  }
+
+  .print-note-body hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 16pt 0;
+  }
+
+  .print-note-body .print-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0 0 10pt;
+  }
+
+  .print-note-body .print-table th,
+  .print-note-body .print-table td {
+    border: 1px solid var(--border);
+    padding: 4pt 8pt;
+    text-align: left;
+  }
+
+  .print-note-body .print-table th {
+    background: var(--bg-code);
+    font-weight: 650;
+  }
+
+  .print-note-body .print-table tr {
+    break-inside: avoid;
+  }
+
+  .print-note-body .print-code {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8pt 10pt;
+    margin: 0 0 10pt;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: var(--font-mono);
+    font-size: 10.5pt;
+    break-inside: avoid;
+  }
+
+  .print-note-body .print-inline-code {
+    background: var(--bg-code);
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+  }
+
+  .print-note-body .print-checkbox {
+    width: 11pt;
+    height: 11pt;
+    margin: 0 5pt 0 0;
+    vertical-align: middle;
+  }
+
+  .print-note-body .print-image {
+    max-width: 100%;
+    break-inside: avoid;
+  }
+
+  .print-note-body a {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
+  .print-note-body .print-wikilink {
+    font-weight: 600;
+  }
+
+  .print-note-body .print-tag {
+    color: var(--accent);
+    font-weight: 600;
+  }
+}
