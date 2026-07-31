@@ -1,6 +1,7 @@
 import { signal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import {
+  activeTag,
   createFolder,
   createNote,
   currentPath,
@@ -352,6 +353,18 @@ export function Sidebar() {
         >
           <span>☑ Tareas</span>
           <kbd>{mod}⇧T</kbd>
+        </button>
+        <button
+          class={view.value === 'tags' ? 'nav-btn active' : 'nav-btn'}
+          onClick={() => {
+            // Siempre al índice completo, no a un filtro que pudiera haber
+            // quedado activo de una visita anterior (igual que Buscar vuelve
+            // a nacer en blanco cada vez que se entra).
+            activeTag.value = null;
+            view.value = 'tags';
+          }}
+        >
+          <span>🏷️ Etiquetas</span>
         </button>
         <button class="nav-btn" onClick={() => (quickOpen.value = true)}>
           <span>📄 Abrir nota</span>

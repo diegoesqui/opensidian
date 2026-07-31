@@ -21,7 +21,7 @@ import {
 import { seedDemoVault } from './fs/demo';
 import { extOf, normalize, parentOf, titleOf } from './util';
 
-export type ViewKind = 'note' | 'journal' | 'search' | 'tasks';
+export type ViewKind = 'note' | 'journal' | 'search' | 'tasks' | 'tags';
 
 export const vault = signal<Vault | null>(null);
 export const tree = signal<VaultEntry | null>(null);
@@ -48,6 +48,7 @@ async function activateVault(v: Vault): Promise<void> {
   vault.value = v;
   currentPath.value = null;
   view.value = 'journal';
+  activeTag.value = null;
   await refreshTree();
   void refreshTrash();
   void buildIndex(v);
@@ -95,6 +96,7 @@ export async function switchVault(): Promise<void> {
   vault.value = null;
   tree.value = null;
   currentPath.value = null;
+  activeTag.value = null;
   trashEntries.value = [];
   resetIndex();
 }
@@ -107,6 +109,18 @@ export async function forgetStored(): Promise<void> {
 export function openNote(path: string): void {
   currentPath.value = path;
   view.value = 'note';
+}
+
+/**
+ * Etiqueta activa para filtrar (issue #12): null = el índice completo de
+ * etiquetas; con valor, la vista de etiquetas muestra solo las notas y
+ * líneas que la usan. Clic en una etiqueta (editor o panel) llama a esto.
+ */
+export const activeTag = signal<string | null>(null);
+
+export function openTag(name: string): void {
+  activeTag.value = name;
+  view.value = 'tags';
 }
 
 /** Cmd/Ctrl+clic en un enlace [[Nota]]: la abre si existe, o la crea en la raíz. */
