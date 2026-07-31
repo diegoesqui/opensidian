@@ -4,6 +4,7 @@ import {
   NOTE_EXT,
   openBrowserVault,
   openFolderVault,
+  TRASH_DIR,
   type Vault,
   type VaultEntry
 } from './fs/vault';
@@ -20,6 +21,7 @@ import {
 } from './search';
 import { seedDemoVault } from './fs/demo';
 import { migrateLegacyTemplate } from './templates';
+import { purgeHistoryUnder, renameHistory, startHistoryTracking, stopHistoryTracking } from './history';
 import { extOf, normalize, parentOf, titleOf } from './util';
 
 export type ViewKind = 'note' | 'journal' | 'search' | 'tasks' | 'tags';
@@ -66,6 +68,9 @@ async function activateVault(v: Vault): Promise<void> {
   await refreshTree();
   void refreshTrash();
   void buildIndex(v);
+  // Historial de versiones (issue #15): un barrido periódico propio, sin
+  // relación con el índice de búsqueda ni con el autoguardado del editor.
+  startHistoryTracking();
 }
 
 export async function pickFolder(): Promise<void> {
@@ -113,6 +118,7 @@ export async function switchVault(): Promise<void> {
   activeTag.value = null;
   trashEntries.value = [];
   resetIndex();
+  stopHistoryTracking();
 }
 
 export async function forgetStored(): Promise<void> {
@@ -237,6 +243,10 @@ async function movePath(path: string, kind: 'file' | 'dir', newPath: string): Pr
   // de la papelera a la raíz y arrastrar la nota de vuelta a su carpeta.
   unmarkDeleted(newPath);
   notifyRenamed(path, newPath, kind);
+  // El historial de versiones (issue #15) se indexa por ruta igual que el
+  // índice de búsqueda: sin esto, renombrar o mover una nota dejaría su
+  // historial huérfano bajo la ruta vieja.
+  await renameHistory(path, newPath, kind);
   if (oldTitle !== null && newTitle !== null && oldTitle !== newTitle) {
     await updateLinksAfterRename(v, oldTitle, newTitle);
   }
@@ -295,7 +305,11 @@ export async function deleteEntry(entry: VaultEntry): Promise<void> {
   if (open && (open === entry.path || open.startsWith(entry.path + '/'))) {
     currentPath.value = null;
   }
-  await v.moveToTrash(entry.path, entry.kind);
+  const trashPath = await v.moveToTrash(entry.path, entry.kind);
+  // El historial (issue #15) sigue a la nota también a la papelera: así, si
+  // se restaura, reengancha con restoreEntry() de abajo sin quedar huérfano
+  // bajo la ruta original (que restoreEntry ni siquiera conserva).
+  await renameHistory(entry.path, trashPath, entry.kind);
   notifyDeleted(entry.path, entry.kind);
   await refreshTree();
   await refreshTrash();
@@ -319,6 +333,10 @@ export async function restoreEntry(entry: VaultEntry): Promise<void> {
     return;
   }
   unmarkDeleted(entry.name);
+  // Reengancha el historial (issue #15) que había seguido a la nota a la
+  // papelera (ver deleteEntry) con su nueva ruta -la raíz, no la carpeta
+  // original: restoreEntry no la recuerda, y el historial tampoco puede.
+  await renameHistory(entry.path, entry.name, entry.kind);
   await refreshTree();
   await refreshTrash();
   // Reconstruye el índice entero en vez de parchear búsqueda y backlinks a
@@ -332,6 +350,10 @@ export async function restoreEntry(entry: VaultEntry): Promise<void> {
 export async function emptyTrash(): Promise<void> {
   const v = vault.value;
   if (!v) return;
+  // Vaciar la papelera es un borrado real y para siempre (issue #10): su
+  // historial de versiones (issue #15) tampoco debería sobrevivir, o se
+  // acumularía sin límite con cada nota que el usuario tira de verdad.
+  await purgeHistoryUnder(TRASH_DIR, 'dir');
   await v.emptyTrash();
   await refreshTrash();
 }

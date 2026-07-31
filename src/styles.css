@@ -1160,6 +1160,114 @@ button.icon.danger:hover {
   text-decoration: line-through;
 }
 
+/* ========== Historial de versiones (issue #15) ========== */
+.history-modal {
+  width: min(760px, 94vw);
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px 6px;
+}
+
+.history-title {
+  flex: 1;
+  font-weight: 600;
+}
+
+/* Deja clarísimo que esto no es una copia de seguridad (issue #15): vive
+   solo en este navegador, no en el vault. Mismo tono de aviso que .error,
+   pero sin el color de alerta -no es un fallo, es una aclaración-. */
+.history-disclaimer {
+  font-size: 12.5px;
+  color: var(--muted);
+  background: var(--bg-code);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 0 0 10px;
+}
+
+.history-body {
+  display: flex;
+  gap: 12px;
+  max-height: 50vh;
+}
+
+.history-versions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 190px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+}
+
+.history-versions li {
+  padding: 7px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.history-versions li:hover,
+.history-versions li.sel {
+  background: var(--bg-active);
+}
+
+.history-diff {
+  flex: 1;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.history-diff-legend {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+/* Los mismos fondos que las líneas del diff, para que la leyenda se lea de
+   un vistazo sin tener que emparejar colores a ojo. */
+.diff-swatch {
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+.diff-swatch.diff-add {
+  background: rgba(63, 145, 47, 0.16);
+}
+
+.diff-swatch.diff-remove {
+  background: rgba(214, 69, 69, 0.14);
+}
+
+.history-diff-line {
+  padding: 0 6px;
+  border-radius: 3px;
+}
+
+.history-diff-line.diff-add {
+  background: rgba(63, 145, 47, 0.16);
+}
+
+.history-diff-line.diff-remove {
+  background: rgba(214, 69, 69, 0.14);
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+
+.history-footer {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  margin-top: 10px;
+}
+
 /* ========== Quick switcher (y selector de plantillas, issue #22) ========== */
 .modal-backdrop {
   position: fixed;
