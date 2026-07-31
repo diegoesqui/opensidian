@@ -148,6 +148,18 @@ export function HistoryPanel() {
               ))}
             </ul>
             <div class="history-diff">
+              {/* Sin esta leyenda el diff es ambiguo justo cuando más
+                  importa: los colores van en el sentido "versión elegida ->
+                  nota actual", así que lo verde es lo que se PERDERÍA al
+                  restaurar, al revés de lo que sugiere el verde a primera
+                  vista. */}
+              {!noDiff && (
+                <p class="history-diff-legend">
+                  <span class="diff-swatch diff-remove">Rojo</span>: la versión elegida ·{' '}
+                  <span class="diff-swatch diff-add">Verde</span>: la nota ahora, que se
+                  sustituiría al restaurar
+                </p>
+              )}
               {noDiff && <p class="muted">Sin diferencias con la versión actual.</p>}
               {!noDiff &&
                 ops.map((op, i) => (

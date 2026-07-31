@@ -1226,6 +1226,27 @@ button.icon.danger:hover {
   white-space: pre-wrap;
 }
 
+.history-diff-legend {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+/* Los mismos fondos que las líneas del diff, para que la leyenda se lea de
+   un vistazo sin tener que emparejar colores a ojo. */
+.diff-swatch {
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+.diff-swatch.diff-add {
+  background: rgba(63, 145, 47, 0.16);
+}
+
+.diff-swatch.diff-remove {
+  background: rgba(214, 69, 69, 0.14);
+}
+
 .history-diff-line {
   padding: 0 6px;
   border-radius: 3px;
