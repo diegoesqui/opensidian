@@ -1,8 +1,8 @@
 import { createStore, del, delMany, get, keys, set, update } from 'idb-keyval';
 import { strFromU8, strToU8, unzlibSync, zlibSync } from 'fflate';
 import { flushAll, notifyExternalChange, unmarkDeleted } from './editor/autosave';
-import { notifySaved } from './search';
-import type { Vault, VaultEntry } from './fs/vault';
+import { indexedContents, indexReady, notifySaved } from './search';
+import type { Vault } from './fs/vault';
 
 /**
  * Historial local de versiones por nota (issue #15). Vive en IndexedDB, vía
@@ -32,7 +32,7 @@ export interface HistoryVersion {
   content: string;
 }
 
-/** Cada cuánto se recorre el vault en busca de notas cuyo contenido haya
+/** Cada cuánto se repasan las notas en busca de contenido que haya
  * cambiado desde la última instantánea (issue #15). 5 minutos: bastante fino
  * como para no perder gran cosa de una sesión de edición si algo sale mal,
  * pero muy por debajo de la frecuencia del autoguardado (500 ms) y en un
@@ -112,27 +112,35 @@ function runWhenIdle(fn: () => void): void {
 let timer: ReturnType<typeof setInterval> | null = null;
 let scanning = false;
 
-async function tick(v: Vault): Promise<void> {
+/**
+ * Un barrido: compara cada nota con su última instantánea y guarda las que
+ * hayan cambiado.
+ *
+ * El contenido sale del índice de búsqueda (indexedContents), que ya lo
+ * mantiene en memoria al día, y NO de leer el vault entero del disco cada
+ * vez: ese es el patrón del proyecto para cualquier índice que se cuelgue de
+ * search/index.ts, y aquí evita además una ronda de lecturas cada 5 minutos
+ * durante toda la sesión -algo que se nota en un portátil con la carpeta de
+ * notas en un disco gestionado o de red-.
+ *
+ * Consecuencia asumida: una edición hecha FUERA de la app (abrir el .md con
+ * otro editor) no genera instantánea, porque el índice tampoco se entera
+ * hasta que se recarga. No se pierde nada del historial ya guardado, solo se
+ * deja de añadir fotos de lo que la app no ve; y hoy ninguna otra parte de
+ * Opensidian detecta esos cambios externos tampoco.
+ */
+async function tick(): Promise<void> {
   if (scanning) return;
+  // Con el índice a medio construir, contents solo tiene una parte de las
+  // notas: esperar al siguiente barrido en vez de guardar fotos a medias.
+  if (!indexReady.value) return;
   scanning = true;
   try {
     // Que "el contenido actual" sea de verdad el último, no lo que quedó a
-    // medio escribir hace menos de 500 ms.
+    // medio escribir hace menos de 500 ms. flushAll() dispara el guardado
+    // pendiente, que a su vez pasa por notifySaved y deja contents al día.
     await flushAll();
-    const root = await v.listTree();
-    const paths: string[] = [];
-    const collect = (e: VaultEntry) => {
-      if (e.kind === 'file') paths.push(e.path);
-      e.children?.forEach(collect);
-    };
-    collect(root);
-    for (const path of paths) {
-      let content: string;
-      try {
-        content = await v.readFile(path);
-      } catch {
-        continue; // archivo ilegible justo ahora: se salta, no rompe el resto del barrido
-      }
+    for (const [path, content] of [...indexedContents()]) {
       let known = lastContent.get(path);
       if (known === undefined) {
         const stored = await get<StoredVersion[]>(path, store);
@@ -151,11 +159,13 @@ async function tick(v: Vault): Promise<void> {
 
 /** Arranca el barrido periódico para el vault recién activado. Se llama
  * desde activateVault() en state.ts; el temporizador vive mientras ese vault
- * esté abierto y se para en switchVault(). */
-export function startHistoryTracking(v: Vault): void {
+ * esté abierto y se para en switchVault(). No recibe el vault: el contenido
+ * lo pone el índice de búsqueda (ver tick()), y así tampoco puede quedarse
+ * un barrido en vuelo apuntando al vault anterior tras cambiar de carpeta. */
+export function startHistoryTracking(): void {
   stopHistoryTracking();
   lastContent = new Map();
-  timer = setInterval(() => runWhenIdle(() => void tick(v)), SCAN_INTERVAL_MS);
+  timer = setInterval(() => runWhenIdle(() => void tick()), SCAN_INTERVAL_MS);
 }
 
 export function stopHistoryTracking(): void {

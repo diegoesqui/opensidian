@@ -70,7 +70,7 @@ async function activateVault(v: Vault): Promise<void> {
   void buildIndex(v);
   // Historial de versiones (issue #15): un barrido periódico propio, sin
   // relación con el índice de búsqueda ni con el autoguardado del editor.
-  startHistoryTracking(v);
+  startHistoryTracking();
 }
 
 export async function pickFolder(): Promise<void> {

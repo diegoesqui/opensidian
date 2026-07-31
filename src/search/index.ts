@@ -27,6 +27,18 @@ let mini = createMini();
 export const indexReady = signal(false);
 export const filePaths = signal<string[]>([]);
 
+/**
+ * Contenido ya indexado de cada nota, tal cual está en `contents`. Lo usan
+ * los índices que se cuelgan de este (ver search/links.ts, search/tasks.ts,
+ * search/tags.ts) y el historial de versiones (history.ts), para no volver a
+ * leer el vault entero del disco por su cuenta: `contents` ya se mantiene al
+ * día en notifySaved/notifyDeleted/notifyRenamed. Se devuelve el iterador de
+ * las entradas, no el Map, para que nadie de fuera pueda mutarlo.
+ */
+export function indexedContents(): IterableIterator<[string, string]> {
+  return contents.entries();
+}
+
 function createMini() {
   return new MiniSearch<Doc>({
     idField: 'path',
