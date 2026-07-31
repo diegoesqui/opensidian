@@ -35,6 +35,10 @@ export function openTemplatePicker(): void {
     return;
   }
   targetEditor = editor;
+  // Limpia un aviso anterior (típicamente el de «enfoca una nota» de más
+  // arriba): sin esto se queda pegado en la barra lateral para siempre,
+  // porque vaultError solo se limpiaba al abrir un vault.
+  vaultError.value = null;
   templatePickerOpen.value = true;
 }
 
