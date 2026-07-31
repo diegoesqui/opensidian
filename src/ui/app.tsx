@@ -8,6 +8,7 @@ import { TasksPanel } from './tasks-panel';
 import { QuickSwitcher } from './quick-switcher';
 import { Outline } from './outline';
 import { TrashPanel, trashOpen } from './trash';
+import { TemplateSettings, templateSettingsOpen } from './template-settings';
 
 function EmptyState() {
   return (
@@ -41,6 +42,7 @@ export function App() {
       {view.value === 'note' && currentPath.value && <Outline />}
       {quickOpen.value && <QuickSwitcher />}
       {trashOpen.value && <TrashPanel />}
+      {templateSettingsOpen.value && <TemplateSettings />}
     </div>
   );
 }

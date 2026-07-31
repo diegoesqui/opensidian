@@ -1155,6 +1155,72 @@ button.icon.danger:hover {
   text-decoration: line-through;
 }
 
+/* ========== Plantilla del diario ========== */
+.template-modal {
+  width: min(640px, 92vw);
+  padding: 14px 16px 12px;
+}
+
+.template-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+}
+
+.template-title {
+  flex: 1;
+  font-weight: 600;
+}
+
+.template-hint {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+
+.template-hint code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  background: var(--bg-hover);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+.template-textarea {
+  width: 100%;
+  min-height: 40vh;
+  resize: vertical;
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  outline: none;
+}
+
+.template-textarea:focus {
+  border-color: var(--accent);
+}
+
+.template-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 10px;
+}
+
+.template-saved {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
 /* ========== Quick switcher ========== */
 .modal-backdrop {
   position: fixed;

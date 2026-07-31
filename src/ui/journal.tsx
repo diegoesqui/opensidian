@@ -1,23 +1,13 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { refreshTree, vault, vaultError } from '../state';
+import { notifyExternalChange, unmarkDeleted } from '../editor/autosave';
+import { notifySaved } from '../search';
+import { renderJournalTemplate } from '../templates';
+import { formatDay, isoDate } from '../util';
 import { MarkdownEditor } from './markdown-editor';
 
 const CHUNK = 10;
 export const JOURNAL_DIR = 'journal';
-
-const pad = (n: number) => String(n).padStart(2, '0');
-export const isoDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
-function formatDay(dateStr: string): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const label = new Date(y, m - 1, d).toLocaleDateString('es-ES', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
-  return label.charAt(0).toUpperCase() + label.slice(1);
-}
 
 function dayHeading(dateStr: string, today: string): string {
   if (dateStr === today) return 'Hoy';
@@ -37,7 +27,22 @@ export function JournalView() {
     void (async () => {
       const todayPath = `${JOURNAL_DIR}/${today}.md`;
       if (!(await v.exists(todayPath))) {
-        await v.writeFile(todayPath, '');
+        // La plantilla (issue #13) solo se aplica al CREAR la nota de hoy:
+        // esta rama solo se alcanza cuando todavía no existe, así que nunca
+        // pisa una nota con contenido (aunque esté vacía por otro motivo).
+        const content = await renderJournalTemplate(v, today);
+        // Igual que createNote() en state.ts: si 'journal' se borró y se
+        // recreó, una marca de borrado vieja dejaría este archivo sin
+        // guardar en silencio (isDeleted() empareja por prefijo de carpeta).
+        unmarkDeleted(todayPath);
+        await v.writeFile(todayPath, content);
+        // Con contenido de plantilla (p. ej. checkboxes) el archivo debe
+        // entrar en los índices de búsqueda, tareas y enlaces desde ya, no
+        // solo cuando el usuario lo edite y dispare el autoguardado.
+        notifySaved(todayPath, content);
+        // Defensivo: si por lo que sea ya hay un editor montado sobre esta
+        // ruta, que recargue en vez de quedarse con lo que tenía en memoria.
+        await notifyExternalChange(todayPath);
         await refreshTree();
       }
       const root = await v.listTree();
