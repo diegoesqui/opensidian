@@ -10,6 +10,7 @@ import { QuickSwitcher } from './quick-switcher';
 import { Outline } from './outline';
 import { TrashPanel, trashOpen } from './trash';
 import { TemplatePicker, templatePickerOpen } from './template-insert';
+import { HistoryPanel, historyPath } from './history-panel';
 
 function EmptyState() {
   return (
@@ -46,6 +47,7 @@ export function App() {
       {quickOpen.value && <QuickSwitcher />}
       {trashOpen.value && <TrashPanel />}
       {templatePickerOpen.value && <TemplatePicker />}
+      {historyPath.value && <HistoryPanel />}
     </div>
   );
 }

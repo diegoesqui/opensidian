@@ -24,6 +24,7 @@ import { cycleTheme, themeIcon, themeLabel } from './theme';
 import { sidebarCollapsed, toggleSidebar } from './layout';
 import { trashOpen } from './trash';
 import { openTemplatePicker } from './template-insert';
+import { openHistory } from './history-panel';
 
 /** Icono de panel lateral (distinto del de cambiar de carpeta, para no confundirlos). */
 function SidebarToggleIcon() {
@@ -186,6 +187,18 @@ function RowActions({ entry }: { entry: VaultEntry }) {
             📁
           </button>
         </>
+      )}
+      {entry.kind === 'file' && (
+        <button
+          class="icon"
+          title="Historial de versiones"
+          onClick={(e) => {
+            e.stopPropagation();
+            openHistory(entry.path);
+          }}
+        >
+          🕐
+        </button>
       )}
       <button
         class="icon"
