@@ -46,14 +46,25 @@ export const NOTE_EXT = /\.(md|markdown|txt)$/i;
 export const ASSETS_DIR = 'assets';
 
 /**
+ * Carpeta de plantillas del vault (issue #13): la plantilla del diario se
+ * guarda como un archivo más ahí dentro (`${TEMPLATES_DIR}/diario.md`, ver
+ * templates.ts) en vez de en algún ajuste local del navegador, para que
+ * viaje con las notas al copiar o exportar la carpeta. Empieza por '.' por
+ * lo mismo que ASSETS_DIR: listTree() la oculta del árbol de notas sin
+ * necesidad de un filtro aparte.
+ */
+export const TEMPLATES_DIR = '.plantillas';
+
+/**
  * Papelera del vault (issue #10): borrar mueve aquí en vez de llamar a
  * removeEntry() directamente, que no pasa por la papelera del sistema
- * operativo y es irreversible. El nombre empieza por '.' a propósito: tanto
- * listTree() como listAllPaths() ya saltan cualquier entrada que empiece por
- * '.', así que la papelera queda oculta del árbol de notas y de la
- * exportación a zip sin añadir un filtro nuevo (ver comentario en
- * listAllPaths sobre por qué esto último es una decisión, no un efecto
- * colateral).
+ * operativo y es irreversible. El nombre empieza por '.' a propósito:
+ * listTree() oculta cualquier entrada que empiece por '.', así que la
+ * papelera queda fuera del árbol de notas sin añadir un filtro nuevo.
+ * listAllPaths() (la exportación a zip) también la excluye, pero ahí es un
+ * caso aparte -no "todo lo que empiece por punto", ya que TEMPLATES_DIR
+ * también empieza por '.' y sí se exporta-: ver el comentario de esa función
+ * sobre por qué la papelera es la excepción deliberada.
  */
 export const TRASH_DIR = '.trash';
 
@@ -148,19 +159,24 @@ export class HandleVault implements Vault {
    * incluidos.
    *
    * Decisión (issue #10): la papelera (TRASH_DIR) NO entra en el zip
-   * exportado. El filtro de '.' de aquí abajo ya la excluye porque su nombre
-   * empieza por punto, pero es intencional y no un efecto colateral: exportar
-   * es "llévate una copia de mis notas", y las notas que están en la papelera
-   * son justo las que el usuario decidió quitar de en medio -incluirlas
-   * resucitaría en el zip algo que se pidió borrar, y además podría traer
-   * duplicados con sufijo raro (p. ej. "Nota 2.md") fruto de colisiones al
-   * borrar-. Si se quiere conservar una nota borrada, la vía es restaurarla
-   * primero (panel de la papelera) y exportar después. */
+   * exportado, aunque su nombre empiece por punto igual que TEMPLATES_DIR
+   * (que sí entra, ver más abajo). Es intencional y no un efecto colateral:
+   * exportar es "llévate una copia de mis notas", y las notas que están en
+   * la papelera son justo las que el usuario decidió quitar de en medio
+   * -incluirlas resucitaría en el zip algo que se pidió borrar, y además
+   * podría traer duplicados con sufijo raro (p. ej. "Nota 2.md") fruto de
+   * colisiones al borrar-. Si se quiere conservar una nota borrada, la vía es
+   * restaurarla primero (panel de la papelera) y exportar después. */
   async listAllPaths(): Promise<string[]> {
     const paths: string[] = [];
     const walk = async (dir: FileSystemDirectoryHandle, path: string): Promise<void> => {
       for await (const handle of iterate(dir)) {
-        if (handle.name.startsWith('.')) continue;
+        // A diferencia de listTree(), aquí el filtro de '.' no es "todo lo
+        // interno se oculta": TEMPLATES_DIR también empieza por punto pero
+        // el issue #13 pide explícitamente que la plantilla "viaje con las
+        // notas", así que se deja pasar por nombre. TRASH_DIR sigue cayendo
+        // en el filtro general (ver el porqué en el comentario de arriba).
+        if (handle.name.startsWith('.') && handle.name !== TEMPLATES_DIR) continue;
         const childPath = path ? `${path}/${handle.name}` : handle.name;
         if (handle.kind === 'directory') await walk(handle as FileSystemDirectoryHandle, childPath);
         else paths.push(childPath);
