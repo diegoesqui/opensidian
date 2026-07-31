@@ -10,7 +10,7 @@ import {
 } from '@codemirror/view';
 import type { SyntaxNode, SyntaxNodeRef } from '@lezer/common';
 import { WIKILINK_RE } from '../wikilink';
-import { TAG_RE, looksLikeHexColor } from '../tags';
+import { tagsInLine } from '../tags';
 
 /**
  * Live preview estilo Obsidian: los marcadores markdown (#, **, ``, - […])
@@ -305,14 +305,13 @@ function build(view: EditorView): DecorationSet {
     // tiene el cursor.
     for (let ln = doc.lineAt(from).number; ln <= doc.lineAt(to).number; ln++) {
       const line = doc.line(ln);
-      TAG_RE.lastIndex = 0;
-      let mt: RegExpExecArray | null;
-      while ((mt = TAG_RE.exec(line.text))) {
-        const start = line.from + mt.index;
-        const end = start + mt[0].length;
-        if (looksLikeHexColor(mt[1])) continue;
+      for (const t of tagsInLine(line.text)) {
+        const start = line.from + t.start;
+        // isInCode() consulta el árbol de sintaxis, que aquí sí está
+        // disponible: cubre los bloques ``` (que tagsInLine no puede ver,
+        // porque solo recibe una línea suelta).
         if (isInCode(state, start)) continue;
-        ranges.push(Decoration.mark({ class: 'cm-tag' }).range(start, end));
+        ranges.push(Decoration.mark({ class: 'cm-tag' }).range(start, line.from + t.end));
       }
     }
   }
@@ -364,13 +363,10 @@ function wikiLinkAt(state: EditorState, pos: number): string | null {
 
 function tagAt(state: EditorState, pos: number): string | null {
   const line = state.doc.lineAt(pos);
-  TAG_RE.lastIndex = 0;
-  let m: RegExpExecArray | null;
-  while ((m = TAG_RE.exec(line.text))) {
-    const start = line.from + m.index;
-    const end = start + m[0].length;
-    if (looksLikeHexColor(m[1])) continue;
-    if (pos >= start && pos <= end) return m[1];
+  for (const t of tagsInLine(line.text)) {
+    if (pos >= line.from + t.start && pos <= line.from + t.end) {
+      return isInCode(state, line.from + t.start) ? null : t.name;
+    }
   }
   return null;
 }

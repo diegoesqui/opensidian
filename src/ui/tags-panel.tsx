@@ -78,8 +78,8 @@ function TagResults({ tag }: { tag: string }) {
             {g.title}
           </h2>
           <ul class="tasks-list">
-            {g.items.map((hit, i) => (
-              <li key={i} class="backlinks-item" onClick={() => openNoteAt(hit.path, hit.pos)}>
+            {g.items.map((hit) => (
+              <li key={hit.pos} class="backlinks-item" onClick={() => openNoteAt(hit.path, hit.pos)}>
                 <p class="backlinks-context">{hit.lineText.trim() || '(línea vacía)'}</p>
               </li>
             ))}
