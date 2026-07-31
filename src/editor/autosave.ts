@@ -1,5 +1,5 @@
 import type { Extension } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
+import { EditorView, ViewPlugin } from '@codemirror/view';
 
 type FlushFn = () => Promise<void> | void;
 type ReloadFn = () => Promise<void> | void;
@@ -18,24 +18,68 @@ const reloaders = new Map<string, ReloadFn>();
  */
 let activeEditor: EditorView | null = null;
 
+/**
+ * Último editor que tuvo el foco, aunque ahora mismo no lo tenga. Hace falta
+ * porque **pulsar un botón de la interfaz desenfoca el editor antes de que
+ * corra el onClick**: al hacer clic en «Insertar plantilla» de la barra
+ * lateral, el mousedown deja activeEditor en null y la acción creía que no
+ * había ninguna nota abierta (con el atajo de teclado no pasaba, porque el
+ * foco no se mueve). Se limpia cuando ese editor se destruye, no cuando
+ * pierde el foco.
+ */
+let lastFocusedEditor: EditorView | null = null;
+
+/** Editores montados ahora mismo. Sirve de último recurso: si solo hay uno
+ * (el caso de NoteView), es el destino evidente aunque nunca se haya clicado
+ * dentro. Con varios (JournalView monta uno por día) no se adivina. */
+const mountedEditors = new Set<EditorView>();
+
 export function setActiveEditor(view: EditorView | null) {
   activeEditor = view;
+  if (view) lastFocusedEditor = view;
 }
 
 export function getActiveEditor(): EditorView | null {
   return activeEditor;
 }
 
+/**
+ * Editor sobre el que debe actuar una acción global lanzada desde fuera del
+ * editor (un botón, un menú). A diferencia de getActiveEditor(), sobrevive a
+ * que el propio clic haya quitado el foco al editor.
+ */
+export function getTargetEditor(): EditorView | null {
+  if (activeEditor) return activeEditor;
+  if (lastFocusedEditor && mountedEditors.has(lastFocusedEditor)) return lastFocusedEditor;
+  if (mountedEditors.size === 1) return [...mountedEditors][0];
+  return null;
+}
+
 /** Extensión que mantiene activeEditor al día según el foco del propio
  * CodeMirror (update.focusChanged/view.hasFocus, el mismo mecanismo que ya
- * usan live-preview.ts, image-preview.ts y format-toolbar.ts). Se añade a
- * cada MarkdownEditor montado. */
+ * usan live-preview.ts, image-preview.ts y format-toolbar.ts) y lleva la
+ * cuenta de qué editores existen. Se añade a cada MarkdownEditor montado. */
 export function activeEditorTracking(): Extension {
-  return EditorView.updateListener.of((update) => {
-    if (!update.focusChanged) return;
-    if (update.view.hasFocus) setActiveEditor(update.view);
-    else if (getActiveEditor() === update.view) setActiveEditor(null);
-  });
+  return [
+    // Destruir la vista no dispara un focusChanged (no es una transición de
+    // foco, es que el editor deja de existir), así que la limpieza de las
+    // referencias cuelga del destroy del plugin.
+    ViewPlugin.define((view) => {
+      mountedEditors.add(view);
+      return {
+        destroy() {
+          mountedEditors.delete(view);
+          if (activeEditor === view) activeEditor = null;
+          if (lastFocusedEditor === view) lastFocusedEditor = null;
+        }
+      };
+    }),
+    EditorView.updateListener.of((update) => {
+      if (!update.focusChanged) return;
+      if (update.view.hasFocus) setActiveEditor(update.view);
+      else if (activeEditor === update.view) activeEditor = null;
+    })
+  ];
 }
 
 export function registerFlusher(fn: FlushFn): () => void {

@@ -11,11 +11,9 @@ import { tagCompletionSource } from '../editor/tag-autocomplete';
 import { headingsTracker, type Heading } from '../editor/headings';
 import {
   activeEditorTracking,
-  getActiveEditor,
   isDeleted,
   registerFlusher,
-  registerReloader,
-  setActiveEditor
+  registerReloader
 } from '../editor/autosave';
 import { filePaths, notifySaved } from '../search';
 import { allTagCounts } from '../search/tags';
@@ -154,11 +152,10 @@ export function MarkdownEditor({
       unregisterReloader();
       window.removeEventListener('focus', reloadIfChanged);
       onEditor?.(null);
-      // Destruir la vista no dispara un focusChanged (no es una transición
-      // de foco, es que el editor deja de existir): sin esto, el selector de
-      // plantillas podría quedarse con una referencia a un EditorView ya
-      // destruido si se cierra la nota justo después de enfocarla.
-      if (view && getActiveEditor() === view) setActiveEditor(null);
+      // Las referencias globales al editor activo se sueltan solas en el
+      // destroy del plugin de activeEditorTracking (autosave.ts): destruir la
+      // vista no dispara un focusChanged, así que esa limpieza no puede
+      // colgar del foco.
       view?.destroy();
       view = null;
     };

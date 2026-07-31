@@ -2,7 +2,7 @@ import { signal } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { EditorView } from '@codemirror/view';
 import { TEMPLATES_DIR } from '../fs/vault';
-import { getActiveEditor } from '../editor/autosave';
+import { getTargetEditor } from '../editor/autosave';
 import { filePaths } from '../search';
 import { applyTemplate, splitAtCursor, TEMPLATE_TOKENS } from '../templates';
 import { vault, vaultError } from '../state';
@@ -18,20 +18,25 @@ export const templatePickerOpen = signal(false);
 
 // El editor donde insertar se captura al ABRIR el selector, no al elegir: en
 // el momento de elegir el foco ya está en el input del propio modal, así que
-// preguntarle a getActiveEditor() en ese instante devolvería null (o, peor,
-// el editor equivocado si mientras tanto se enfocó otro).
+// preguntarlo en ese instante devolvería null (o, peor, el editor equivocado
+// si mientras tanto se enfocó otro).
 let targetEditor: EditorView | null = null;
 
 /**
- * Abre el selector sobre el editor que tenga el foco ahora mismo. Sin un
- * editor enfocado no hay dónde insertar nada -mejor no abrir nada que
- * insertar en un sitio inesperado-, así que se avisa por el mismo canal que
- * el resto de errores del vault y no se abre el modal.
+ * Abre el selector sobre la nota en la que se estaba escribiendo. Se pregunta
+ * por getTargetEditor() y no por getActiveEditor() porque al llegar desde el
+ * botón de la barra lateral el editor YA ha perdido el foco (lo roba el
+ * propio botón al pulsarlo), y con el foco actual a secas la acción se
+ * quedaba en el aviso de más abajo aunque hubiera una nota abierta.
+ *
+ * Cuando de verdad no hay dónde insertar -vista de búsqueda, tareas...- se
+ * avisa por el mismo canal que el resto de errores del vault y no se abre el
+ * modal: mejor no abrir nada que insertar en un sitio inesperado.
  */
 export function openTemplatePicker(): void {
-  const editor = getActiveEditor();
+  const editor = getTargetEditor();
   if (!editor) {
-    vaultError.value = 'Enfoca una nota para insertar una plantilla ahí.';
+    vaultError.value = 'Abre una nota y pon el cursor donde quieras insertar la plantilla.';
     return;
   }
   targetEditor = editor;

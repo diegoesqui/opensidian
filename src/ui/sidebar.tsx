@@ -20,11 +20,27 @@ import {
 import type { VaultEntry } from '../fs/vault';
 import { exportZip } from '../fs/export';
 import { parentOf } from '../util';
-import { cycleTheme, themeIcon, themeLabel } from './theme';
+import { cycleTheme, ThemeIcon, themeLabel } from './theme';
 import { sidebarCollapsed, toggleSidebar } from './layout';
 import { trashOpen } from './trash';
 import { openTemplatePicker } from './template-insert';
 import { openHistory } from './history-panel';
+import {
+  IconCalendar,
+  IconCheckSquare,
+  IconClock,
+  IconDownload,
+  IconFile,
+  IconFolderOpen,
+  IconFolderPlus,
+  IconPencil,
+  IconPlus,
+  IconSearch,
+  IconTag,
+  IconTemplate,
+  IconTrash,
+  IconX
+} from './icons';
 
 /** Icono de panel lateral (distinto del de cambiar de carpeta, para no confundirlos). */
 function SidebarToggleIcon() {
@@ -173,7 +189,7 @@ function RowActions({ entry }: { entry: VaultEntry }) {
               editing.value = { type: 'new-note', dir: entry.path };
             }}
           >
-            ＋
+            <IconPlus size={14} />
           </button>
           <button
             class="icon"
@@ -184,7 +200,7 @@ function RowActions({ entry }: { entry: VaultEntry }) {
               editing.value = { type: 'new-folder', dir: entry.path };
             }}
           >
-            📁
+            <IconFolderPlus size={14} />
           </button>
         </>
       )}
@@ -197,7 +213,7 @@ function RowActions({ entry }: { entry: VaultEntry }) {
             openHistory(entry.path);
           }}
         >
-          🕐
+          <IconClock size={14} />
         </button>
       )}
       <button
@@ -208,7 +224,7 @@ function RowActions({ entry }: { entry: VaultEntry }) {
           editing.value = { type: 'rename', path: entry.path };
         }}
       >
-        ✎
+        <IconPencil size={14} />
       </button>
       <button
         class="icon danger"
@@ -219,7 +235,7 @@ function RowActions({ entry }: { entry: VaultEntry }) {
           if (confirm(`¿Eliminar ${what} «${entry.name}»?`)) void deleteEntry(entry);
         }}
       >
-        ✕
+        <IconX size={14} />
       </button>
     </span>
   );
@@ -314,14 +330,14 @@ function CollapsedRail() {
           view.value = 'journal';
         }}
       >
-        📅
+        <IconCalendar size={17} />
       </button>
       <button
         class="icon rail-btn"
         title="Abrir nota"
         onClick={() => (quickOpen.value = true)}
       >
-        📄
+        <IconFile size={17} />
       </button>
     </aside>
   );
@@ -343,7 +359,7 @@ export function Sidebar() {
           {v.name}
         </span>
         <button class="icon" title={themeLabel()} onClick={cycleTheme}>
-          {themeIcon()}
+          <ThemeIcon />
         </button>
       </div>
       {/* Aquí y no en una vista concreta (NoteView, JournalView...): la barra
@@ -357,21 +373,30 @@ export function Sidebar() {
           class={view.value === 'journal' ? 'nav-btn active' : 'nav-btn'}
           onClick={() => (view.value = 'journal')}
         >
-          <span>📅 Diario</span>
+          <span class="nav-label">
+            <IconCalendar />
+            Diario
+          </span>
           <kbd>{mod}J</kbd>
         </button>
         <button
           class={view.value === 'search' ? 'nav-btn active' : 'nav-btn'}
           onClick={() => (view.value = 'search')}
         >
-          <span>🔍 Buscar</span>
+          <span class="nav-label">
+            <IconSearch />
+            Buscar
+          </span>
           <kbd>{mod}⇧F</kbd>
         </button>
         <button
           class={view.value === 'tasks' ? 'nav-btn active' : 'nav-btn'}
           onClick={() => (view.value = 'tasks')}
         >
-          <span>☑ Tareas</span>
+          <span class="nav-label">
+            <IconCheckSquare />
+            Tareas
+          </span>
           <kbd>{mod}⇧T</kbd>
         </button>
         <button
@@ -384,14 +409,23 @@ export function Sidebar() {
             view.value = 'tags';
           }}
         >
-          <span>🏷️ Etiquetas</span>
+          <span class="nav-label">
+            <IconTag />
+            Etiquetas
+          </span>
         </button>
         <button class="nav-btn" onClick={() => (quickOpen.value = true)}>
-          <span>📄 Abrir nota</span>
+          <span class="nav-label">
+            <IconFile />
+            Abrir nota
+          </span>
           <kbd>{mod}K</kbd>
         </button>
         <button class="nav-btn" onClick={() => openTemplatePicker()}>
-          <span>🗒️ Insertar plantilla</span>
+          <span class="nav-label">
+            <IconTemplate />
+            Insertar plantilla
+          </span>
           <kbd>{mod}⇧P</kbd>
         </button>
       </nav>
@@ -402,14 +436,14 @@ export function Sidebar() {
           title="Nueva nota"
           onClick={() => (editing.value = { type: 'new-note', dir: '' })}
         >
-          ＋
+          <IconPlus size={15} />
         </button>
         <button
           class="icon"
           title="Nueva carpeta"
           onClick={() => (editing.value = { type: 'new-folder', dir: '' })}
         >
-          📁
+          <IconFolderPlus size={15} />
         </button>
       </div>
       <div class={`tree${dropTarget.value === '' ? ' drag-over-root' : ''}`} {...dropHandlers('')}>
@@ -418,18 +452,21 @@ export function Sidebar() {
         )}
         {t?.children?.map((child) => <TreeNode key={child.path} entry={child} depth={0} />)}
         {t && !t.children?.length && !ed && (
-          <p class="tree-empty">Todavía no hay notas. Crea la primera con ＋</p>
+          <p class="tree-empty">Todavía no hay notas. Crea la primera con el botón +</p>
         )}
       </div>
       <div class="sidebar-footer">
         <button class="btn subtle small" onClick={() => (trashOpen.value = true)}>
-          🗑️ Papelera{trashEntries.value.length ? ` (${trashEntries.value.length})` : ''}
+          <IconTrash size={15} />
+          Papelera{trashEntries.value.length ? ` (${trashEntries.value.length})` : ''}
         </button>
         <button class="btn subtle small" onClick={() => void switchVault()}>
-          📂 Cambiar carpeta de notas
+          <IconFolderOpen size={15} />
+          Cambiar carpeta de notas
         </button>
         {v.kind === 'opfs' && (
           <button class="btn subtle small" onClick={() => void exportZip(v)}>
+            <IconDownload size={15} />
             Exportar notas (.zip)
           </button>
         )}
