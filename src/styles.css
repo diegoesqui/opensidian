@@ -25,6 +25,7 @@
   --syn-function: #4078f2;
   --syn-type: #986801;
   --syn-punct: #6a6f77;
+  --syn-property: #e45649;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -49,6 +50,7 @@
     --syn-function: #61afef;
     --syn-type: #e5c07b;
     --syn-punct: #abb2bf;
+    --syn-property: #e06c75;
   }
 }
 
@@ -73,6 +75,7 @@
   --syn-function: #61afef;
   --syn-type: #e5c07b;
   --syn-punct: #abb2bf;
+  --syn-property: #e06c75;
 }
 
 * {
@@ -706,6 +709,24 @@ button.icon.danger:hover {
 }
 .cm-tok-punct {
   color: var(--syn-punct);
+}
+/* Claves de JSON, propiedades de CSS y etiquetas de HTML/XML. */
+.cm-tok-property {
+  color: var(--syn-property);
+}
+/* Los atributos de HTML/XML comparten el naranja de los números a propósito:
+   es lo que hacen One Light y One Dark, de donde sale esta paleta. */
+.cm-tok-attribute {
+  color: var(--syn-number);
+}
+.cm-tok-variable {
+  color: var(--syn-function);
+}
+.cm-tok-inserted {
+  color: var(--syn-string);
+}
+.cm-tok-deleted {
+  color: var(--danger);
 }
 
 /* Checkboxes del live preview */
