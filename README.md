@@ -65,3 +65,23 @@ ejemplo — útil para probar sin tocar archivos reales.
 - Si se edita la misma nota a la vez desde dos sitios, gana el último guardado.
 - El autoguardado tiene ~0,5 s de debounce; al cerrar la pestaña justo después de
   teclear, la app hace un guardado de emergencia, pero lo más seguro es `Ctrl+S`.
+
+## Licencia
+
+El código de Opensidian se publica bajo licencia **MIT** (ver [LICENSE](LICENSE)):
+puedes usarlo, modificarlo y redistribuirlo libremente, conservando el aviso de
+copyright.
+
+El archivo `opensidian.html` que se descarga de las releases lleva incrustadas,
+ya compiladas, las bibliotecas de las que depende la app y la fuente tipográfica
+**Inter**, cada una con su propia licencia (MIT, Apache-2.0 y SIL Open Font
+License 1.1 en el caso de Inter). Todos esos avisos se reproducen en
+[THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt) y **viajan también dentro del
+propio HTML**, como comentario al principio del documento, porque esas licencias
+exigen que acompañen a cada copia que se distribuye.
+
+Si cambian las dependencias, el archivo de avisos se regenera con:
+
+```bash
+npm run notices
+```
