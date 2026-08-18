@@ -25,11 +25,13 @@ import { sidebarCollapsed, toggleSidebar } from './layout';
 import { trashOpen } from './trash';
 import { openTemplatePicker } from './template-insert';
 import { openHistory } from './history-panel';
+import { updateAvailable } from '../update-check';
 import {
   IconCalendar,
   IconCheckSquare,
   IconClock,
   IconDownload,
+  IconUpdate,
   IconFile,
   IconFolderOpen,
   IconFolderPlus,
@@ -469,6 +471,22 @@ export function Sidebar() {
             <IconDownload size={15} />
             Exportar notas (.zip)
           </button>
+        )}
+        {/*
+          Solo aparece cuando hay una version mas nueva publicada. La app no
+          puede instalarla sola (ver src/update-check.ts), asi que el boton
+          lleva a la pagina de la release para descargarla a mano.
+        */}
+        {updateAvailable.value && (
+          <a
+            class="btn subtle small update-link"
+            href={updateAvailable.value.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <IconUpdate size={15} />
+            Versión {updateAvailable.value.version} disponible
+          </a>
         )}
       </div>
     </aside>
