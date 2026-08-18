@@ -201,6 +201,20 @@ export function IconMore(p: IconProps) {
 }
 
 /** Exportar / descargar. */
+/**
+ * Flecha circular de actualizar. Se distingue a proposito de IconDownload, que
+ * ya se usa para exportar el vault a .zip y podria aparecer en el mismo pie de
+ * la barra lateral: dos botones con el mismo icono ahi al lado se confunden.
+ */
+export function IconUpdate(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M20 12a8 8 0 1 1-2.34-5.66" />
+      <path d="M20 3.5V8h-4.5" />
+    </Svg>
+  );
+}
+
 export function IconDownload(p: IconProps) {
   return (
     <Svg {...p}>

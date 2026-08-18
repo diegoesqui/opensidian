@@ -45,8 +45,17 @@ function licenseNotices(): Plugin {
   };
 }
 
+// La version se lee del package.json y se inyecta en el bundle: la app la
+// necesita para saber si la ultima release de GitHub es mas nueva que ella
+// misma (src/update-check.ts). Leerla de aqui evita tener el numero escrito
+// en dos sitios que puedan desincronizarse.
+const { version } = JSON.parse(readFileSync('package.json', 'utf8')) as { version: string };
+
 export default defineConfig({
   plugins: [preact(), viteSingleFile(), licenseNotices()],
+  define: {
+    __APP_VERSION__: JSON.stringify(version)
+  },
   build: {
     target: 'es2022',
     // Todo (incl. la fuente incrustada) debe quedar en el único HTML final:

@@ -469,6 +469,16 @@ button.icon.danger:hover {
   text-align: left;
 }
 
+/* El aviso de version nueva es un enlace, no un boton, porque abre la pagina
+   de la release en otra pestana. Estas tres reglas son solo para que un <a>
+   se vea exactamente igual que los <button> hermanos del pie: los botones ya
+   heredan estas propiedades del navegador y los enlaces no. */
+.sidebar-footer .update-link {
+  text-decoration: none;
+  color: var(--accent);
+  font: inherit;
+}
+
 .sidebar.collapsed {
   width: 48px;
   align-items: center;
