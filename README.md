@@ -35,6 +35,8 @@ funciona igual pero guarda las notas dentro del propio navegador, con exportaci�
   etiquetas contando alias — JSON, YAML, TOML, INI/env, XML, HTML, CSS, SQL, Python,
   JavaScript, TypeScript, Java, Kotlin, Scala, C, C++, C#, Go, Rust, shell, diff,
   Dockerfile y más.
+- **Botón de copiar** en la esquina de cada bloque de código, que copia solo el
+  código, sin las vallas ```` ``` ````.
 - Pegar imágenes y capturas directamente en la nota; se guardan en `assets/`.
 - Pegar una URL con texto seleccionado la convierte en enlace markdown.
 
