@@ -27,6 +27,7 @@ import { go } from '@codemirror/legacy-modes/mode/go';
 import { rust } from '@codemirror/legacy-modes/mode/rust';
 import { tags, type Tag } from '@lezer/highlight';
 import { livePreview } from './live-preview';
+import { copyCodeButton } from './copy-code';
 import { tablePreview } from './table-preview';
 import { formatKeymap, formatToolbar } from './format-toolbar';
 import { blockFormatKeymap } from './block-format';
@@ -166,6 +167,7 @@ export function createEditor(opts: EditorOptions): EditorView {
         markdown({ base: markdownLanguage, codeLanguages }),
         syntaxHighlighting(mdHighlight),
         livePreview(),
+        copyCodeButton(),
         tablePreview(),
         formatToolbar(),
         keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),

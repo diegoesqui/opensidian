@@ -695,6 +695,61 @@ button.icon.danger:hover {
   background: var(--bg-code);
   padding-left: 10px;
   padding-right: 10px;
+  /* Ancla para el botón de copiar, que va absoluto en la esquina. `position`
+     no altera la altura de la línea, así que no le afecta el problema que sí
+     tienen los márgenes con la caché vertical de CodeMirror. */
+  position: relative;
+}
+
+/* Botón de copiar de los bloques de código (src/editor/copy-code.ts). Se
+   queda tenue hasta que el ratón pasa por la línea de la valla, para no
+   competir con el código. */
+.cm-copy-code {
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  opacity: 0.5;
+  cursor: pointer;
+  transition:
+    opacity 0.12s ease,
+    color 0.12s ease,
+    background 0.12s ease;
+}
+
+.cm-line.cm-codeblock:hover .cm-copy-code {
+  opacity: 1;
+}
+
+.cm-copy-code:hover {
+  opacity: 1;
+  color: var(--fg);
+  background: var(--bg);
+}
+
+.cm-copy-code:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.cm-copy-code.is-copied {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.cm-copy-code.is-failed {
+  opacity: 1;
+  color: var(--danger);
 }
 
 /* Resaltado de sintaxis dentro de bloques de código. */
