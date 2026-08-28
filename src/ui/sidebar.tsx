@@ -22,6 +22,7 @@ import { exportZip } from '../fs/export';
 import { parentOf } from '../util';
 import { cycleTheme, ThemeIcon, themeLabel } from './theme';
 import { sidebarCollapsed, toggleSidebar } from './layout';
+import { JOURNAL_DIR } from './journal';
 import { trashOpen } from './trash';
 import { openTemplatePicker } from './template-insert';
 import { openHistory } from './history-panel';
@@ -60,7 +61,18 @@ type Editing =
   | { type: 'rename'; path: string };
 
 const editing = signal<Editing | null>(null);
-const collapsed = signal<Record<string, boolean>>({});
+
+/**
+ * Carpetas plegadas del árbol: la clave es la ruta, y una ruta ausente
+ * significa desplegada. `journal/` arranca plegada (issue #33) porque crece
+ * a una nota por día: desplegada llena la barra lateral entera y empuja el
+ * resto de notas fuera de la vista, y además el diario se lee desde su propia
+ * vista (Cmd/Ctrl+J), no desde el árbol.
+ *
+ * Es solo el estado INICIAL: en cuanto el usuario la abre o la cierra, manda
+ * lo que él haya elegido durante el resto de la sesión.
+ */
+const collapsed = signal<Record<string, boolean>>({ [JOURNAL_DIR]: true });
 
 const isMac = /Mac/i.test(navigator.platform);
 const mod = isMac ? '⌘' : 'Ctrl+';
