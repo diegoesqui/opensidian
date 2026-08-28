@@ -381,9 +381,11 @@ function renderInlineNode(
     case 'CodeMark':
     case 'SuperscriptMark':
     case 'SubscriptMark':
+    case 'HighlightMark':
+    case 'FootnoteMark':
     case 'LinkMark':
-      // Marcadores puramente en línea (**, `, ~~, ^, [/]...): no llevan el
-      // espacio de cortesía de los de bloque, se descartan tal cual.
+      // Marcadores puramente en línea (**, `, ~~, ^, ==, [^, [/]...): no
+      // llevan el espacio de cortesía de los de bloque, se descartan tal cual.
       return node.to;
 
     case 'Escape':
@@ -419,6 +421,29 @@ function renderInlineNode(
       const s = document.createElement('s');
       renderInlineChildren(doc, node, s, ctx, linkContext);
       into.appendChild(s);
+      return node.to;
+    }
+
+    // Formatos del issue #31 que no vienen en el parser de serie, definidos
+    // en markdown-extras.ts. Como cualquier otro nodo en línea: el marcador
+    // desaparece (arriba) y el contenido va dentro de su etiqueta HTML.
+    case 'Highlight': {
+      const mark = document.createElement('mark');
+      mark.className = 'print-highlight';
+      renderInlineChildren(doc, node, mark, ctx, linkContext);
+      into.appendChild(mark);
+      return node.to;
+    }
+
+    case 'FootnoteRef': {
+      // La llamada dentro del texto va en volandas; la etiqueta de la línea
+      // de definición ("[^1]: …") se queda a ras, igual que en el editor
+      // (ver el caso FootnoteRef de live-preview.ts).
+      const isDef = doc.lineAt(node.from).from === node.from && doc.sliceString(node.to, node.to + 1) === ':';
+      const el = document.createElement(isDef ? 'span' : 'sup');
+      el.className = isDef ? 'print-footnote-label' : 'print-footnote-ref';
+      renderInlineChildren(doc, node, el, ctx, linkContext);
+      into.appendChild(el);
       return node.to;
     }
 
@@ -731,13 +756,16 @@ function renderAutolink(doc: Text, node: SyntaxNode, into: HTMLElement) {
   const raw = doc.sliceString(node.from, node.to);
   const clean = raw.startsWith('<') && raw.endsWith('>') ? raw.slice(1, -1) : raw;
   const href = autolinkHref(clean);
+  // Se imprime `clean` y no `raw`: los ángulos son el marcador de la sintaxis
+  // y el editor tambien los oculta desde el issue #31, así que dejarlos aquí
+  // haría que el papel no coincidiera con la pantalla.
   if (href) {
     const a = document.createElement('a');
     a.href = href;
-    a.textContent = raw;
+    a.textContent = clean;
     into.appendChild(a);
   } else {
-    into.appendChild(document.createTextNode(raw));
+    into.appendChild(document.createTextNode(clean));
   }
 }
 

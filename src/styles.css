@@ -10,6 +10,7 @@
   --bg-hover: rgba(0, 0, 0, 0.05);
   --bg-active: rgba(109, 90, 230, 0.1);
   --bg-code: rgba(0, 0, 0, 0.045);
+  --bg-highlight: rgba(255, 213, 79, 0.55);
   --fg: #1f2328;
   --muted: #82878d;
   --faint: #b6babe;
@@ -35,6 +36,7 @@
     --bg-hover: rgba(255, 255, 255, 0.06);
     --bg-active: rgba(139, 124, 240, 0.16);
     --bg-code: rgba(255, 255, 255, 0.07);
+    --bg-highlight: rgba(214, 170, 46, 0.38);
     --fg: #dadde1;
     --muted: #8a8f96;
     --faint: #5b6066;
@@ -60,6 +62,7 @@
   --bg-hover: rgba(255, 255, 255, 0.06);
   --bg-active: rgba(139, 124, 240, 0.16);
   --bg-code: rgba(255, 255, 255, 0.07);
+  --bg-highlight: rgba(214, 170, 46, 0.38);
   --fg: #dadde1;
   --muted: #8a8f96;
   --faint: #5b6066;
@@ -624,6 +627,54 @@ button.icon.danger:hover {
   color: var(--muted);
 }
 
+/* `==resaltado==` (issue #31). El color de texto no se toca: el fondo es
+   translúcido, así que funciona igual sobre el papel blanco de la impresión
+   que sobre el fondo oscuro del tema de noche. */
+.cm-highlight {
+  background: var(--bg-highlight);
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+/* Superíndices `^x^` y subíndices `~x~` (issue #31).
+   `line-height: 0` no es cosmético: sin él, el desplazamiento vertical
+   agranda la caja de la línea y CodeMirror mide una altura distinta para esa
+   línea, que es justo lo que descuadra su caché de movimiento vertical
+   (misma familia de problema que los márgenes en .cm-line, ver más abajo). */
+.cm-sup,
+.cm-sub {
+  font-size: 0.75em;
+  line-height: 0;
+}
+
+.cm-sup {
+  vertical-align: super;
+}
+
+.cm-sub {
+  vertical-align: sub;
+}
+
+/* Notas al pie (issue #31): la llamada dentro del texto va en volandas, como
+   un superíndice; la etiqueta de la línea de definición se queda a ras porque
+   un "1:" en superíndice se lee mal. */
+.cm-footnote-ref {
+  font-size: 0.75em;
+  line-height: 0;
+  vertical-align: super;
+  color: var(--accent);
+}
+
+.cm-footnote-label {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.cm-line.cm-footnote-def {
+  color: var(--muted);
+  font-size: 0.92em;
+}
+
 .cm-inline-code {
   font-family: var(--font-mono);
   font-size: 0.88em;
@@ -653,6 +704,15 @@ button.icon.danger:hover {
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
+}
+
+/* En un autolink `<https://…>` el texto visible ES el nodo URL, así que el
+   resaltado de sintaxis le pone además `.cm-url` (gris apagado) en un span
+   interior, que por estar más adentro ganaría el color. Sin esto los
+   autolinks se verían de otro color que el resto de enlaces. */
+.cm-hyperlink .cm-url {
+  color: inherit;
+  text-decoration: none;
 }
 
 .cm-wikilink {
@@ -1757,6 +1817,7 @@ button.icon.danger:hover {
     --accent: #6d5ae6;
     --border: #e6e6e3;
     --bg-code: rgba(0, 0, 0, 0.045);
+    --bg-highlight: rgba(255, 213, 79, 0.55);
     color: var(--fg);
     background: var(--bg);
     /* Sin esto Chrome descarta los fondos (cabecera de tabla, bloques de
@@ -1900,6 +1961,25 @@ button.icon.danger:hover {
   }
 
   .print-note-body .print-tag {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Issue #31. El <mark> del navegador trae su propio amarillo chillón y su
+     propio color de texto: se le pone el mismo fondo translúcido que en
+     pantalla y se hereda el color, para que salga igual en papel. */
+  .print-note-body .print-highlight {
+    background: var(--bg-highlight);
+    color: inherit;
+    border-radius: 3px;
+    padding: 0 1px;
+  }
+
+  .print-note-body .print-footnote-ref {
+    color: var(--accent);
+  }
+
+  .print-note-body .print-footnote-label {
     color: var(--accent);
     font-weight: 600;
   }

@@ -123,7 +123,14 @@ function listDepth(node: SyntaxNodeRef): number {
 function isInCode(state: EditorState, pos: number): boolean {
   let n: SyntaxNode | null = syntaxTree(state).resolveInner(pos, 1);
   while (n) {
-    if (n.name === 'InlineCode' || n.name === 'FencedCode' || n.name === 'CodeText') return true;
+    if (
+      n.name === 'InlineCode' ||
+      n.name === 'FencedCode' ||
+      n.name === 'CodeBlock' ||
+      n.name === 'CodeText'
+    ) {
+      return true;
+    }
     n = n.parent;
   }
   return false;
@@ -168,8 +175,64 @@ function build(view: EditorView): DecorationSet {
 
           case 'EmphasisMark':
           case 'StrikethroughMark':
+          case 'HighlightMark':
+          case 'SuperscriptMark':
+          case 'SubscriptMark':
             if (!isSel) ranges.push(hide.range(node.from, node.to));
             break;
+
+          // Superíndices `^x^` y subíndices `~x~` (issue #31): el parser ya
+          // los reconocía -@codemirror/lang-markdown los activa por defecto,
+          // ver editor.ts- y print-render.ts ya los imprimía como <sup>/<sub>,
+          // pero en el editor se veían como texto plano con sus marcadores.
+          // El realzado es posicional, no un color, así que no puede salir del
+          // HighlightStyle (que además da el MISMO tag a los dos nodos): va
+          // como decoración de marca, y al contrario que los marcadores se
+          // aplica siempre, también en la línea del cursor.
+          case 'Superscript':
+          case 'Subscript':
+            ranges.push(
+              Decoration.mark({ class: name === 'Superscript' ? 'cm-sup' : 'cm-sub' }).range(
+                node.from,
+                node.to
+              )
+            );
+            break;
+
+          // Notas al pie (issue #31, nodo definido en markdown-extras.ts). El
+          // mismo nodo es la llamada dentro del texto y la etiqueta de la
+          // línea de definición; lo que las distingue es estar al principio de
+          // la línea y llevar ":" detrás, y se pintan distinto a propósito: la
+          // llamada en volandas como un superíndice, la definición como una
+          // etiqueta a ras de línea, porque un "1:" en superíndice se lee mal.
+          case 'FootnoteRef': {
+            const isDef = node.from === line.from && doc.sliceString(node.to, node.to + 1) === ':';
+            ranges.push(
+              Decoration.mark({ class: isDef ? 'cm-footnote-label' : 'cm-footnote-ref' }).range(
+                node.from,
+                node.to
+              )
+            );
+            if (isDef) ranges.push(lineClass('cm-footnote-def').range(line.from));
+            break;
+          }
+
+          case 'FootnoteMark':
+            if (!isSel) ranges.push(hide.range(node.from, node.to));
+            break;
+
+          // Autolink `<https://…>` (issue #31): el parser lo reconocía pero
+          // nadie lo decoraba, así que se veía con sus ángulos y el
+          // Cmd/Ctrl+clic no lo abría (ver linkNodeAt más abajo). Los ángulos
+          // son hijos LinkMark del propio nodo, así que se ocultan como
+          // cualquier otro marcador.
+          case 'Autolink': {
+            if (isSel) break;
+            const auto = node.node;
+            for (const m of auto.getChildren('LinkMark')) ranges.push(hide.range(m.from, m.to));
+            ranges.push(Decoration.mark({ class: 'cm-hyperlink' }).range(auto.from, auto.to));
+            break;
+          }
 
           case 'CodeMark':
             if (!isSel && node.node.parent?.name === 'InlineCode') {
@@ -253,7 +316,13 @@ function build(view: EditorView): DecorationSet {
             }
             break;
 
-          case 'FencedCode': {
+          // `CodeBlock` es el bloque de código por sangría (cuatro espacios),
+          // que se pintaba como texto normal: solo se decoraban los de valla
+          // ```. Se ven igual a propósito -son lo mismo para markdown-, y
+          // marcarlo ayuda a detectar la sangría accidental que convierte un
+          // párrafo en código sin querer.
+          case 'FencedCode':
+          case 'CodeBlock': {
             const last = doc.lineAt(node.to).number;
             for (let n = line.number; n <= last; n++) {
               ranges.push(lineClass('cm-codeblock').range(doc.line(n).from));
@@ -352,9 +421,14 @@ export function livePreview(): Extension {
   return livePreviewPlugin;
 }
 
+/**
+ * Nodo de enlace que contiene `pos`, sea `[texto](url)` o `<url>`: los dos
+ * cuelgan su destino de un hijo `URL`, así que quien los abre no necesita
+ * distinguirlos (issue #31).
+ */
 function linkNodeAt(state: EditorState, pos: number): SyntaxNode | null {
   let n: SyntaxNode | null = syntaxTree(state).resolveInner(pos, 1);
-  while (n && n.name !== 'Link') n = n.parent;
+  while (n && n.name !== 'Link' && n.name !== 'Autolink') n = n.parent;
   return n;
 }
 
@@ -385,6 +459,11 @@ function openSafeUrl(raw: string) {
   const url = raw.trim();
   if (/^https?:\/\//i.test(url) || /^mailto:/i.test(url)) {
     window.open(url, '_blank', 'noopener,noreferrer');
+  } else if (/^[\w.+-]+@[\w-]+(\.[\w-]+)+$/.test(url)) {
+    // Un autolink `<alguien@dominio.com>` llega aquí sin esquema: sin este
+    // caso acabaría abriéndose como "https://alguien@dominio.com". Mismo
+    // criterio que autolinkHref() en print-render.ts.
+    window.open(`mailto:${url}`, '_blank', 'noopener,noreferrer');
   } else if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) {
     window.open(`https://${url}`, '_blank', 'noopener,noreferrer');
   }
