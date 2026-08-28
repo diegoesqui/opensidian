@@ -1,5 +1,6 @@
 import { quickOpen, vault, view } from '../state';
 import { flushAll } from '../editor/autosave';
+import { cycleEditorMode } from '../editor/mode';
 import { openTemplatePicker } from './template-insert';
 
 export function initShortcuts() {
@@ -26,6 +27,14 @@ export function initShortcuts() {
         handled = true;
       } else if (key === 't' && e.shiftKey) {
         if (vault.value) view.value = 'tasks';
+        handled = true;
+      } else if (key === 'e' && !e.shiftKey) {
+        // Mod+E rueda entre vista previa, markdown crudo y solo lectura
+        // (issue #32). Es la misma tecla con la que Obsidian alterna entre
+        // editar y leer, y aquí va en la fase de captura como el resto: el
+        // modo también debe poder cambiarse desde el diario, que no tiene
+        // menú de nota donde ponerlo.
+        if (vault.value) cycleEditorMode();
         handled = true;
       } else if (key === 'p' && e.shiftKey) {
         // Mod+Shift+P: "P" de Plantilla, y coincide con el atajo de paleta

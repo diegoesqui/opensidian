@@ -9,6 +9,7 @@ import { imagePasteHandling } from '../editor/paste-image';
 import { acceptCompletionKeymap, wikiLinkCompletionSource } from '../editor/wikilink-autocomplete';
 import { tagCompletionSource } from '../editor/tag-autocomplete';
 import { headingsTracker, type Heading } from '../editor/headings';
+import { editorMode, setModeEffect } from '../editor/mode';
 import {
   activeEditorTracking,
   isDeleted,
@@ -45,6 +46,11 @@ export function MarkdownEditor({
   onActiveHeading
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
+  // El EditorView vive dentro del efecto de abajo (que solo depende de
+  // `path`); esta referencia es lo que permite que el efecto del modo, que se
+  // dispara por otro motivo, alcance al editor ya montado.
+  const viewRef = useRef<EditorView | null>(null);
+  const mode = editorMode.value;
 
   useEffect(() => {
     const v = vault.value;
@@ -95,6 +101,10 @@ export function MarkdownEditor({
         content,
         onDocChanged: onChange,
         placeholder,
+        // .peek() y no `mode`: la vista se crea tras leer el archivo, y para
+        // entonces el modo puede haber cambiado. Leer la señal aquí dentro la
+        // suscribiría además a este efecto, que solo debe depender de `path`.
+        mode: editorMode.peek(),
         extraExtensions: [
           linkClickHandling(
             (title) => void openOrCreateWikiLink(title),
@@ -120,6 +130,7 @@ export function MarkdownEditor({
           ...(onHeadings ? [headingsTracker(onHeadings, onActiveHeading ?? (() => {}))] : [])
         ]
       });
+      viewRef.current = view;
       onEditor?.(view);
       if (autofocus) view.focus();
     })();
@@ -151,6 +162,7 @@ export function MarkdownEditor({
       unregister();
       unregisterReloader();
       window.removeEventListener('focus', reloadIfChanged);
+      viewRef.current = null;
       onEditor?.(null);
       // Las referencias globales al editor activo se sueltan solas en el
       // destroy del plugin de activeEditorTracking (autosave.ts): destruir la
@@ -160,6 +172,14 @@ export function MarkdownEditor({
       view = null;
     };
   }, [path]);
+
+  // Issue #32: el modo es de la app, y el diario monta varios editores a la
+  // vez; cada uno se entera por su cuenta en vez de por un registro central.
+  // El montaje ya nace con el modo correcto (ver `mode` en createEditor), así
+  // que esto solo tiene trabajo cuando cambia estando la nota abierta.
+  useEffect(() => {
+    viewRef.current?.dispatch({ effects: setModeEffect.of(mode) });
+  }, [mode]);
 
   return <div class="editor-host" ref={host} />;
 }

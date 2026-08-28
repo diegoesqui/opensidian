@@ -3,6 +3,7 @@ import type { EditorState, Extension, Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view';
 import type { Vault } from '../fs/vault';
 import { mimeForPath } from './images';
+import { isRawMode, modeChanged } from './mode';
 
 /**
  * Render de imágenes `![](ruta)` en el live preview: fuera de la línea
@@ -94,6 +95,7 @@ class ImageWidget extends WidgetType {
 }
 
 function buildImageDecorations(state: EditorState, v: Vault, focused: boolean): DecorationSet {
+  if (isRawMode(state)) return Decoration.none; // issue #32
   const ranges: Range<Decoration>[] = [];
   const doc = state.doc;
   const selectedIn = (from: number, to: number) =>
@@ -137,6 +139,7 @@ export function imagePreview(v: Vault): Extension {
           update.docChanged ||
           update.selectionSet ||
           update.focusChanged ||
+          modeChanged(update) ||
           syntaxTree(update.state) !== syntaxTree(update.startState)
         ) {
           this.decorations = buildImageDecorations(update.state, v, update.view.hasFocus);

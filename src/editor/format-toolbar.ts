@@ -12,7 +12,7 @@ import {
 function toggleWrap(view: EditorView, marker: string): boolean {
   const { state } = view;
   const sel = state.selection.main;
-  if (sel.empty) return false;
+  if (sel.empty || state.readOnly) return false;
   const mLen = marker.length;
   const text = state.sliceDoc(sel.from, sel.to);
 
@@ -151,7 +151,9 @@ class FormatToolbarWidget {
   /** Reacciona a cambios de selección/documento decidiendo si recolocar la barra. */
   sync() {
     const sel = this.view.state.selection.main;
-    if (sel.empty || !this.view.hasFocus) {
+    // En solo lectura (issue #32) se puede seleccionar texto para copiarlo,
+    // pero la barra no debe aparecer: sus botones escriben en el documento.
+    if (sel.empty || !this.view.hasFocus || this.view.state.readOnly) {
       this.dom.style.display = 'none';
       this.anchorLine = null;
       return;
