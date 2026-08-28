@@ -26,6 +26,7 @@ import { c, cpp, java, csharp, scala, kotlin } from '@codemirror/legacy-modes/mo
 import { go } from '@codemirror/legacy-modes/mode/go';
 import { rust } from '@codemirror/legacy-modes/mode/rust';
 import { tags, type Tag } from '@lezer/highlight';
+import { highlightTag, markdownExtras } from './markdown-extras';
 import { livePreview } from './live-preview';
 import { copyCodeButton } from './copy-code';
 import { tablePreview } from './table-preview';
@@ -113,6 +114,9 @@ const mdHighlight = HighlightStyle.define([
   { tag: tags.strong, fontWeight: '650' },
   { tag: tags.emphasis, fontStyle: 'italic' },
   { tag: tags.strikethrough, class: 'cm-strike' },
+  // `==resaltado==` (issue #31): su tag es propio, no de @lezer/highlight, así
+  // que se define junto a la extensión del parser (markdown-extras.ts).
+  { tag: highlightTag, class: 'cm-highlight' },
   { tag: tags.monospace, class: 'cm-inline-code' },
   { tag: tags.quote, class: 'cm-quote' },
   { tag: tags.link, class: 'cm-link' },
@@ -164,7 +168,7 @@ export function createEditor(opts: EditorOptions): EditorView {
         history(),
         drawSelection(),
         EditorView.lineWrapping,
-        markdown({ base: markdownLanguage, codeLanguages }),
+        markdown({ base: markdownLanguage, codeLanguages, extensions: markdownExtras }),
         syntaxHighlighting(mdHighlight),
         livePreview(),
         copyCodeButton(),
