@@ -27,6 +27,7 @@ import { go } from '@codemirror/legacy-modes/mode/go';
 import { rust } from '@codemirror/legacy-modes/mode/rust';
 import { tags, type Tag } from '@lezer/highlight';
 import { highlightTag, markdownExtras } from './markdown-extras';
+import { editorModeExtension, type EditorMode } from './mode';
 import { livePreview } from './live-preview';
 import { copyCodeButton } from './copy-code';
 import { tablePreview } from './table-preview';
@@ -156,6 +157,8 @@ export interface EditorOptions {
   content: string;
   onDocChanged: () => void;
   placeholder?: string;
+  /** Modo inicial (issue #32). Los cambios posteriores llegan por setModeEffect. */
+  mode?: EditorMode;
   extraExtensions?: Extension[];
 }
 
@@ -167,6 +170,7 @@ export function createEditor(opts: EditorOptions): EditorView {
       extensions: [
         history(),
         drawSelection(),
+        editorModeExtension(opts.mode ?? 'live'),
         EditorView.lineWrapping,
         markdown({ base: markdownLanguage, codeLanguages, extensions: markdownExtras }),
         syntaxHighlighting(mdHighlight),

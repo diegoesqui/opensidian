@@ -9,6 +9,7 @@ import {
   WidgetType
 } from '@codemirror/view';
 import type { SyntaxNodeRef } from '@lezer/common';
+import { isRawMode, modeChanged } from './mode';
 
 /**
  * Botón de copiar en la esquina de cada bloque ```código.
@@ -174,6 +175,7 @@ function fencedCodeText(doc: Text, node: SyntaxNodeRef): string {
 }
 
 function build(view: EditorView): DecorationSet {
+  if (isRawMode(view.state)) return Decoration.none; // issue #32
   const ranges: Range<Decoration>[] = [];
   const doc = view.state.doc;
   // Un mismo bloque puede asomar por dos rangos visibles distintos (cuando el
@@ -210,6 +212,7 @@ const copyCodePlugin = ViewPlugin.fromClass(
       if (
         update.docChanged ||
         update.viewportChanged ||
+        modeChanged(update) ||
         syntaxTree(update.state) !== syntaxTree(update.startState)
       ) {
         this.decorations = build(update.view);

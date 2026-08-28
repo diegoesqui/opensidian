@@ -224,6 +224,48 @@ export function IconDownload(p: IconProps) {
   );
 }
 
+/* Modos del editor (issue #32). Los tres comparten silueta a propósito -van
+   uno debajo de otro en el mismo menú- y se distinguen por lo de dentro. */
+
+/** Live Preview: una hoja con el texto ya maquetado. */
+export function IconPreview(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="2.5" />
+      <path d="M7.5 8.5h6M7.5 12h9M7.5 15.5h5" />
+    </Svg>
+  );
+}
+
+/** Código fuente: los signos de "mayor y menor" del código fuente. */
+export function IconRaw(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="2.5" />
+      <path d="M10 9.5 7.5 12l2.5 2.5M14 9.5 16.5 12 14 14.5" />
+    </Svg>
+  );
+}
+
+/** Solo lectura: un candado, no un ojo (un ojo diría "ver", no "no tocar"). */
+export function IconLock(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <rect x="4.5" y="10.5" width="15" height="10" rx="2.5" />
+      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+    </Svg>
+  );
+}
+
+/** Marca de verificación de la opción activa en un menú. */
+export function IconCheck(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M20 6.5 9.5 17 4 11.5" />
+    </Svg>
+  );
+}
+
 /** Volver (índice de etiquetas). */
 export function IconArrowLeft(p: IconProps) {
   return (

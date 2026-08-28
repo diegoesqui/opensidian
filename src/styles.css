@@ -1714,6 +1714,48 @@ button.icon.danger:hover {
   color: var(--muted);
 }
 
+/* Modos del editor dentro del menú de la nota (issue #32). */
+.menu-section-title {
+  padding: 6px 9px 3px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.menu-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border);
+}
+
+/* La marca de verificación va pegada al borde derecho: así las tres etiquetas
+   quedan alineadas y se lee de un vistazo cuál está activo. */
+.menu-item.mode-item > span {
+  flex: 1;
+}
+
+.menu-item.mode-item.active {
+  color: var(--accent);
+}
+
+.menu-item.mode-item.active .icon-svg {
+  color: var(--accent);
+}
+
+/* Aviso de modo en el pie de la barra lateral. Se distingue del resto de
+   botones del pie -que son acciones neutras- porque informa de un estado
+   activo, igual que un botón de navegación seleccionado. */
+.mode-notice {
+  color: var(--accent);
+  background: var(--bg-active);
+}
+
+.mode-notice .icon-svg {
+  color: var(--accent);
+}
+
 /* Issue #14: acción de imprimir (ahora dentro del menú de arriba) + HTML de impresión que
    monta ui/print.ts (construido a mano en editor/print-render.ts a partir
    del árbol de sintaxis, ver ese archivo). CodeMirror solo mantiene en el

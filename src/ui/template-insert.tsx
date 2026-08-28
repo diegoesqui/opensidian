@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { EditorView } from '@codemirror/view';
 import { TEMPLATES_DIR } from '../fs/vault';
 import { getTargetEditor } from '../editor/autosave';
+import { MODE_LABEL } from '../editor/mode';
 import { filePaths } from '../search';
 import { applyTemplate, splitAtCursor, TEMPLATE_TOKENS } from '../templates';
 import { vault, vaultError } from '../state';
@@ -37,6 +38,13 @@ export function openTemplatePicker(): void {
   const editor = getTargetEditor();
   if (!editor) {
     vaultError.value = 'Abre una nota y pon el cursor donde quieras insertar la plantilla.';
+    return;
+  }
+  // Insertar una plantilla escribe en el documento, así que también lo frena
+  // el modo solo lectura (issue #32). Se avisa por el mismo canal que el
+  // resto de errores del vault en vez de abrir el modal y fallar al final.
+  if (editor.state.readOnly) {
+    vaultError.value = `La nota está en modo «${MODE_LABEL.read}»: cambia de modo para poder insertar una plantilla.`;
     return;
   }
   targetEditor = editor;

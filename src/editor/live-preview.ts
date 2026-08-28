@@ -9,6 +9,7 @@ import {
   WidgetType
 } from '@codemirror/view';
 import type { SyntaxNode, SyntaxNodeRef } from '@lezer/common';
+import { isRawMode, modeChanged } from './mode';
 import { WIKILINK_RE } from '../wikilink';
 import { tagsInLine } from '../tags';
 
@@ -39,6 +40,10 @@ class CheckboxWidget extends WidgetType {
     box.addEventListener('mousedown', (e) => e.preventDefault());
     box.addEventListener('click', (e) => {
       e.preventDefault();
+      // En modo solo lectura (issue #32) el checkbox se ve pero no marca:
+      // `EditorState.readOnly` lo consultan los comandos de CodeMirror, pero
+      // un dispatch a pelo como este se aplicaría igual.
+      if (view.state.readOnly) return;
       view.dispatch({
         changes: { from: this.from + 1, to: this.to - 1, insert: this.checked ? ' ' : 'x' }
       });
@@ -132,8 +137,11 @@ function isInCode(state: EditorState, pos: number): boolean {
 }
 
 function build(view: EditorView): DecorationSet {
-  const ranges: Range<Decoration>[] = [];
   const { state } = view;
+  // Modo «Código fuente» (issue #32): ni marcadores ocultos, ni viñetas, ni
+  // checkboxes, ni enlaces… el texto tal cual está en el archivo.
+  if (isRawMode(state)) return Decoration.none;
+  const ranges: Range<Decoration>[] = [];
   const doc = state.doc;
   // Sin foco no se revela nada: la selección "fantasma" en la posición 0
   // de un editor inactivo no debe mostrar los marcadores de su primera línea.
@@ -399,6 +407,7 @@ const livePreviewPlugin = ViewPlugin.fromClass(
         update.selectionSet ||
         update.viewportChanged ||
         update.focusChanged ||
+        modeChanged(update) ||
         syntaxTree(update.state) !== syntaxTree(update.startState)
       ) {
         this.decorations = build(update.view);

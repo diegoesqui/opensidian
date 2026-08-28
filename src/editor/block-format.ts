@@ -12,6 +12,7 @@ type LineComputer = (lineText: string, lineFrom: number) => LineChange;
 /** Aplica `compute` a cada línea tocada por la selección (una o varias), en un solo dispatch. */
 function applyToLines(view: EditorView, compute: LineComputer): boolean {
   const { state } = view;
+  if (state.readOnly) return false; // solo lectura (issue #32)
   const seen = new Set<number>();
   const changes: LineChange[] = [];
   for (const range of state.selection.ranges) {

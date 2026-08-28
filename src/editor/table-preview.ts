@@ -2,6 +2,7 @@ import { syntaxTree } from '@codemirror/language';
 import { type EditorState, type Extension, type Range, StateEffect, StateField, type Text } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, WidgetType } from '@codemirror/view';
 import type { SyntaxNode } from '@lezer/common';
+import { isRawMode, modeChangedIn } from './mode';
 
 /**
  * Render de tablas GFM (estilo Obsidian): fuera de las líneas donde está el
@@ -235,6 +236,7 @@ const focusField = StateField.define<boolean>({
 const trackFocus = EditorView.focusChangeEffect.of((_state, focusing) => setFocus.of(focusing));
 
 function buildTableDecorations(state: EditorState): DecorationSet {
+  if (isRawMode(state)) return Decoration.none; // issue #32
   const ranges: Range<Decoration>[] = [];
   const doc = state.doc;
   const focused = state.field(focusField, false) ?? false;
@@ -269,7 +271,13 @@ const tableDecorations = StateField.define<DecorationSet>({
   create: buildTableDecorations,
   update(value, tr) {
     const focusChanged = tr.effects.some((e) => e.is(setFocus));
-    if (tr.docChanged || !!tr.selection || focusChanged || syntaxTree(tr.state) !== syntaxTree(tr.startState)) {
+    if (
+      tr.docChanged ||
+      !!tr.selection ||
+      focusChanged ||
+      modeChangedIn(tr) ||
+      syntaxTree(tr.state) !== syntaxTree(tr.startState)
+    ) {
       // El árbol de sintaxis puede terminar de actualizarse en una
       // transacción posterior a la propia escritura; sin esta comprobación
       // la tabla no aparecería hasta la siguiente pulsación de tecla.
