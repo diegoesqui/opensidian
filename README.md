@@ -26,9 +26,12 @@ funciona igual pero guarda las notas dentro del propio navegador, con exportaci�
 
 **Escribir**
 
-- Live preview estilo Obsidian: los marcadores (`#`, `**`…) solo se ven en la línea
-  donde está el cursor.
-- Títulos, negrita, cursiva, tachado, listas, citas, tablas y bloques de código.
+- **Live Preview** estilo Obsidian: los marcadores (`#`, `**`…) solo se ven en la
+  línea donde está el cursor. Con `Ctrl/Cmd+E` se pasa a **Código fuente** (el
+  markdown tal cual, sin renderizar nada) o a **Solo lectura** (se ve igual que
+  Live Preview, pero el documento no se puede tocar).
+- Títulos, negrita, cursiva, tachado, `==resaltado==`, superíndices `^x^`,
+  subíndices `~x~`, listas, citas, tablas, notas al pie `[^1]` y bloques de código.
 - Barra de formato flotante al seleccionar texto, con atajos (`Ctrl+B`, `Ctrl+I`).
 - Checkboxes clicables (`- [ ]` / `- [x]`); `Ctrl+Enter` los crea y los cicla.
 - **Resaltado de sintaxis** en bloques ```` ```lenguaje ````: 26 lenguajes y 52
@@ -78,6 +81,7 @@ funciona igual pero guarda las notas dentro del propio navegador, con exportaci�
 | --- | --- |
 | `Ctrl/Cmd + K` | Abrir o crear una nota por nombre |
 | `Ctrl/Cmd + J` | Volver al diario |
+| `Ctrl/Cmd + E` | Cambiar de modo: Live Preview → Código fuente → Solo lectura |
 | `Ctrl/Cmd + S` | Guardar ya (el autoguardado va solo) |
 | `Ctrl/Cmd + Shift + F` | Buscar en todas las notas |
 | `Ctrl/Cmd + Shift + T` | Tareas pendientes |
@@ -127,6 +131,11 @@ resultado real del build en `http://localhost:5173/dist/opensidian.html`.
   marcadores markdown fuera de la línea del cursor y renderizan checkboxes, enlaces
   e imágenes.
 - `src/editor/editor.ts` — configuración del editor y los lenguajes del resaltado.
+- `src/editor/markdown-extras.ts` — la sintaxis que el parser no trae de serie
+  (`==resaltado==` y notas al pie), como extensiones de `@lezer/markdown`.
+- `src/editor/mode.ts` — el modo (Live Preview / Código fuente / Solo lectura) como
+  campo del estado de CodeMirror: quien decora algo lo consulta, y `readOnly` y
+  `editable` se calculan a partir de él.
 - `src/editor/print-render.ts` — recorre el árbol de sintaxis y construye el HTML de
   impresión, porque CodeMirror solo tiene en el DOM las líneas visibles.
 - `src/search/index.ts` — índice MiniSearch en memoria, construido al abrir el vault
