@@ -67,6 +67,10 @@ function renderInline(doc: Text, node: SyntaxNode, into: HTMLElement) {
       case 'EmphasisMark':
       case 'CodeMark':
       case 'StrikethroughMark':
+      case 'HighlightMark':
+      case 'SuperscriptMark':
+      case 'SubscriptMark':
+      case 'FootnoteMark':
         break; // el marcador no se muestra, solo determina el formato aplicado
       case 'InlineCode': {
         const code = document.createElement('code');
@@ -91,6 +95,30 @@ function renderInline(doc: Text, node: SyntaxNode, into: HTMLElement) {
         const s = document.createElement('s');
         renderInline(doc, child, s);
         into.appendChild(s);
+        break;
+      }
+      // Resaltado, super/subíndices y notas al pie (issue #31). Dentro de una
+      // celda la tabla se dibuja con DOM propio, así que las decoraciones del
+      // live preview no llegan aquí: se replica su clase para que un formato
+      // se vea igual dentro y fuera de una tabla. Se usan <span> con la misma
+      // clase, y no <mark>/<sup>/<sub>, para no arrastrar el amarillo y los
+      // tamaños por defecto del navegador.
+      case 'Highlight':
+      case 'Superscript':
+      case 'Subscript':
+      case 'FootnoteRef': {
+        const cls =
+          child.name === 'Highlight'
+            ? 'cm-highlight'
+            : child.name === 'Superscript'
+              ? 'cm-sup'
+              : child.name === 'Subscript'
+                ? 'cm-sub'
+                : 'cm-footnote-ref';
+        const span = document.createElement('span');
+        span.className = cls;
+        renderInline(doc, child, span);
+        into.appendChild(span);
         break;
       }
       default:
