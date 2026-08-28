@@ -5,12 +5,19 @@ import { EditorView, type ViewUpdate } from '@codemirror/view';
 /**
  * Modos de visualización y edición del editor (issue #32):
  *
- *  - `live`: el de siempre, con los marcadores markdown ocultos y el formato
- *    aplicado en el sitio.
- *  - `raw`:  el texto tal cual está en el archivo. No se renderiza NADA -ni
- *    encabezados, ni tablas, ni imágenes, ni el botón de copiar de los
- *    bloques de código-, pero se puede seguir escribiendo.
- *  - `read`: como `live` pero sin poder tocar el documento.
+ *  - `live` («Live Preview»): el de siempre, con los marcadores markdown
+ *    ocultos y el formato aplicado en el sitio.
+ *  - `raw` («Código fuente»): el texto tal cual está en el archivo. No se
+ *    renderiza NADA -ni encabezados, ni tablas, ni imágenes, ni el botón de
+ *    copiar de los bloques de código-, pero se puede seguir escribiendo.
+ *  - `read` («Solo lectura»): como `live` pero sin poder tocar el documento.
+ *
+ * Los nombres visibles se quedan en «Live Preview» y «Código fuente» -los que
+ * usa Obsidian, uno sin traducir y el otro en español- porque son los que ya
+ * le suenan a quien venga de ahí. Y el tercero es «Solo lectura» y no
+ * «Lectura» porque se ve IDÉNTICO a Live Preview: lo único que cambia es que
+ * no se puede escribir, así que es de eso de lo que tiene que hablar el
+ * nombre, o no se entiende para qué está.
  *
  * El modo es de la app, no de cada nota: cambiarlo afecta a la nota abierta y
  * también a los editores del diario (que son varios a la vez). Guardarlo por
@@ -47,15 +54,15 @@ export function cycleEditorMode(): void {
 }
 
 export const MODE_LABEL: Record<EditorMode, string> = {
-  live: 'Vista previa',
-  raw: 'Markdown crudo',
+  live: 'Live Preview',
+  raw: 'Código fuente',
   read: 'Solo lectura'
 };
 
 export const MODE_HINT: Record<EditorMode, string> = {
   live: 'El formato se ve aplicado y los marcadores se ocultan',
   raw: 'El texto tal cual está en el archivo, sin renderizar nada',
-  read: 'Se ve como la vista previa, pero no se puede escribir'
+  read: 'Se ve igual que Live Preview, pero no se puede escribir'
 };
 
 // -------- lado CodeMirror --------
@@ -88,7 +95,7 @@ export function modeOf(state: EditorState): EditorMode {
   return state.field(modeField, false) ?? 'live';
 }
 
-/** Modo Markdown crudo: quien decore algo debe devolver `Decoration.none`. */
+/** Modo «Código fuente»: quien decore algo debe devolver `Decoration.none`. */
 export function isRawMode(state: EditorState): boolean {
   return modeOf(state) === 'raw';
 }

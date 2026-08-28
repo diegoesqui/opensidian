@@ -227,7 +227,7 @@ export function IconDownload(p: IconProps) {
 /* Modos del editor (issue #32). Los tres comparten silueta a propósito -van
    uno debajo de otro en el mismo menú- y se distinguen por lo de dentro. */
 
-/** Vista previa: una hoja con el texto ya maquetado. */
+/** Live Preview: una hoja con el texto ya maquetado. */
 export function IconPreview(p: IconProps) {
   return (
     <Svg {...p}>
@@ -237,7 +237,7 @@ export function IconPreview(p: IconProps) {
   );
 }
 
-/** Markdown crudo: los signos de "mayor y menor" del código fuente. */
+/** Código fuente: los signos de "mayor y menor" del código fuente. */
 export function IconRaw(p: IconProps) {
   return (
     <Svg {...p}>

@@ -29,7 +29,7 @@ export function initShortcuts() {
         if (vault.value) view.value = 'tasks';
         handled = true;
       } else if (key === 'e' && !e.shiftKey) {
-        // Mod+E rueda entre vista previa, markdown crudo y solo lectura
+        // Mod+E rueda entre Live Preview, código fuente y solo lectura
         // (issue #32). Es la misma tecla con la que Obsidian alterna entre
         // editar y leer, y aquí va en la fase de captura como el resto: el
         // modo también debe poder cambiarse desde el diario, que no tiene

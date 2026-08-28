@@ -476,19 +476,19 @@ export function Sidebar() {
           </button>
         )}
         {/*
-          Issue #32: aviso de que el editor NO está en vista previa. Va aquí
+          Issue #32: aviso de que el editor NO está en Live Preview. Va aquí
           y no en la cabecera de la nota porque el pie de la barra lateral se
           ve desde cualquier vista, incluido el diario, que no tiene cabecera
           de nota; y porque el modo es de la app, no de una nota concreta.
           Mismo patrón condicional que el aviso de versión de aquí abajo. Al
-          pulsarlo se vuelve a la vista previa, que es lo que se querrá hacer
+          pulsarlo se vuelve a Live Preview, que es lo que se querrá hacer
           desde el aviso; para elegir entre los tres están el menú «···» de la
           nota y Ctrl/⌘E.
         */}
         {editorMode.value !== 'live' && (
           <button
             class="btn subtle small mode-notice"
-            title="Volver a la vista previa"
+            title={`Volver a ${MODE_LABEL.live}`}
             onClick={() => setEditorMode('live')}
           >
             {editorMode.value === 'read' ? <IconLock size={15} /> : <IconRaw size={15} />}

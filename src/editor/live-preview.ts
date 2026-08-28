@@ -131,7 +131,7 @@ function isInCode(state: EditorState, pos: number): boolean {
 
 function build(view: EditorView): DecorationSet {
   const { state } = view;
-  // Markdown crudo (issue #32): ni marcadores ocultos, ni viñetas, ni
+  // Modo «Código fuente» (issue #32): ni marcadores ocultos, ni viñetas, ni
   // checkboxes, ni enlaces… el texto tal cual está en el archivo.
   if (isRawMode(state)) return Decoration.none;
   const ranges: Range<Decoration>[] = [];
